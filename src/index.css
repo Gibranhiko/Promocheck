@@ -1,0 +1,101 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    @apply bg-surface-secondary text-gray-900 antialiased;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  * {
+    @apply border-gray-200;
+  }
+
+  .safe-top    { padding-top: env(safe-area-inset-top); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+@layer components {
+  /* ── Buttons ─────────────────────────────────────── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm
+           transition-all duration-150 active:scale-[0.97] select-none;
+  }
+  .btn-primary {
+    @apply bg-primary text-white shadow-sm
+           hover:bg-primary-700 active:bg-primary-dark
+           disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+  .btn-secondary {
+    @apply bg-surface-tertiary text-gray-800
+           hover:bg-gray-200 active:bg-gray-300
+           disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+  .btn-danger {
+    @apply bg-error text-white shadow-sm
+           hover:bg-error-dark
+           disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+  .btn-ghost {
+    @apply bg-transparent text-gray-600 hover:bg-surface-tertiary;
+  }
+
+  /* ── Inputs ──────────────────────────────────────── */
+  .input {
+    @apply w-full bg-surface-tertiary border border-transparent rounded-xl px-4 py-3 text-base text-gray-900
+           placeholder:text-gray-400
+           focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary focus:bg-white
+           transition-colors duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .input-error {
+    @apply ring-2 ring-error border-error bg-error-light;
+  }
+
+  /* ── Cards ───────────────────────────────────────── */
+  .card {
+    @apply bg-surface rounded-2xl shadow-card border border-gray-100/80 p-4;
+  }
+  .card-interactive {
+    @apply card cursor-pointer hover:shadow-card-hover active:scale-[0.99] transition-all duration-150;
+  }
+
+  /* ── Badges ──────────────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold;
+  }
+  .badge-success   { @apply bg-success-light text-success-dark; }
+  .badge-warning   { @apply bg-warning-light text-warning-dark; }
+  .badge-error     { @apply bg-error-light   text-error-dark; }
+  .badge-info      { @apply bg-blue-100      text-blue-700; }
+  .badge-secondary { @apply bg-gray-100      text-gray-600; }
+
+  /* ── Skeleton ────────────────────────────────────── */
+  .skeleton {
+    @apply bg-gray-200 rounded-lg animate-pulse;
+  }
+
+  /* ── Section title ───────────────────────────────── */
+  .section-title {
+    @apply text-lg font-bold text-gray-900 tracking-tight;
+  }
+
+  /* ── Status dots ─────────────────────────────────── */
+  .status-dot         { @apply w-2 h-2 rounded-full; }
+  .status-dot-online  { @apply bg-success; }
+  .status-dot-offline { @apply bg-gray-400; }
+}
+
+@layer utilities {
+  .touch-target { @apply min-h-[44px] min-w-[44px]; }
+  /* bottom padding that clears the fixed nav bar + safe area */
+  .pb-nav { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom)); }
+}

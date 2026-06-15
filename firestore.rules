@@ -1,0 +1,192 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: operations
+    // Document ID: local_{timestamp}_{random} (set by client)
+    // Fields:
+    //   - id: string (required) - local operation id
+    //   - localId: string (required) - same as id
+    //   - orderNumber: string (required, 1-50 chars)
+    //   - doorNumber: string (required, 1-20 chars)
+    //   - operationType: string (required, "load" | "unload")
+    //   - operatorId: string (required, immutable) - must match auth uid on create
+    //   - operatorName: string (required, 1-100 chars)
+    //   - clientId: string (required, immutable)
+    //   - clientName: string (required, 1-100 chars)
+    //   - photos: map (required, can be empty)
+    //   - status: string (required) - "pending_sync"|"synced"|"approved"|"rejected"|"error"
+    //   - rejectionReason: string (optional) - set by admin on rejection, cleared on approval
+    //   - createdAt: int (required, immutable) - unix ms timestamp
+    //   - syncedAt: int (optional)
+    //   - errorMessage: string (optional)
+    //
+    // Collection: clients
+    // Document ID: auto-generated
+    // Fields:
+    //   - name: string (required, 1-100 chars)
+    //   - active: bool (required)
+    //   - createdAt: int (required, immutable)
+    //   - createdBy: string (required, immutable) - uid of admin
+    //
+    // Collection: users
+    // Document ID: Firebase Auth uid
+    // Fields:
+    //   - name: string (required, 1-100 chars)
+    //   - email: string (required)
+    //   - role: string (required) - "admin" | "operator"
+    //   - createdAt: int (required, immutable)
+    //
+    // Collection: audit_log
+    // Document ID: auto-generated
+    // Fields:
+    //   - action: string (required)
+    //   - performedBy: string (required) - admin uid
+    //   - details: map (required)
+    //   - createdAt: int (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+
+    function isOperator() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "operator";
+    }
+
+    function isOwnDoc(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidOperation() {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          'orderNumber', 'doorNumber', 'operationType',
+          'operatorId', 'operatorName', 'clientId', 'clientName',
+          'photos', 'status', 'createdAt'
+        ])
+        && data.orderNumber is string
+        && data.orderNumber.size() >= 1
+        && data.orderNumber.size() <= 50
+        && data.doorNumber is string
+        && data.doorNumber.size() >= 1
+        && data.doorNumber.size() <= 20
+        && data.operationType in ['load', 'unload']
+        && data.operatorId is string
+        && data.operatorId == request.auth.uid
+        && data.operatorName is string
+        && data.operatorName.size() >= 1
+        && data.operatorName.size() <= 100
+        && data.clientId is string
+        && data.clientId.size() >= 1
+        && data.clientName is string
+        && data.clientName.size() >= 1
+        && data.clientName.size() <= 100
+        && data.photos is map
+        && data.status in ['pending_sync', 'synced', 'approved', 'rejected', 'error']
+        && data.createdAt is int;
+    }
+
+    function isValidOperationUpdate() {
+      let data = request.resource.data;
+      // Immutable fields must not change
+      return data.operatorId == resource.data.operatorId
+        && data.createdAt == resource.data.createdAt
+        && data.operationType == resource.data.operationType
+        && data.status in ['pending_sync', 'synced', 'approved', 'rejected', 'error']
+        && data.photos is map;
+    }
+
+    function isValidClient() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['name', 'active', 'createdAt', 'createdBy'])
+        && data.name is string
+        && data.name.size() >= 1
+        && data.name.size() <= 100
+        && data.active is bool
+        && data.createdAt is int
+        && data.createdBy is string;
+    }
+
+    function isValidClientUpdate() {
+      let data = request.resource.data;
+      // createdAt and createdBy are immutable
+      return data.createdAt == resource.data.createdAt
+        && data.createdBy == resource.data.createdBy
+        && data.name is string
+        && data.name.size() >= 1
+        && data.name.size() <= 100
+        && data.active is bool;
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    match /operations/{operationId} {
+      // Read (get + list): admins see all; operators can query their own.
+      // NOTE: `read` covers both single-doc get and collection queries.
+      // Operators are trusted internal employees — allowing list is acceptable
+      // since the app already scopes all operator queries to their own uid.
+      allow read: if isAdmin() || isOperator();
+
+      // Create: operators only, with full field validation
+      allow create: if isOperator() && isValidOperation();
+
+      // Update: admins can update anything (status changes, photo URL patches);
+      // operators can only update their own and must pass validation
+      allow update: if isAdmin() ||
+        (isOperator()
+          && resource.data.operatorId == request.auth.uid
+          && isValidOperationUpdate());
+
+      allow delete: if false;
+    }
+
+    match /clients/{clientId} {
+      // All authenticated users can read clients (operators need the dropdown)
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidClient();
+      allow update: if isAdmin() && isValidClientUpdate();
+      // Hard delete only allowed for admins (client-side guards ensure only unused clients are deleted)
+      allow delete: if isAdmin();
+    }
+
+    match /audit_log/{entryId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    match /users/{userId} {
+      // Operators read their own profile; admins read all
+      allow read: if isOwnDoc(userId) || isAdmin();
+      // User docs are created by admin via secondary Firebase app
+      allow create: if isAdmin();
+      // Operators can update their own profile but CANNOT change their role
+      allow update: if isAdmin() ||
+        (isOwnDoc(userId) &&
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(["role"]));
+      allow delete: if false;
+    }
+  }
+}

@@ -1,0 +1,34 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+
+    function isOperator() {
+      return isAuthenticated() &&
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == "operator";
+    }
+
+    function isValidPhoto() {
+      return request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    function isOperationOwner(operationId) {
+      return firestore.get(/databases/(default)/documents/operations/$(operationId)).data.operatorId == request.auth.uid;
+    }
+
+    match /operations/{operationId}/{photoType} {
+      allow read: if isAdmin() || (isOperator() && isOperationOwner(operationId));
+      allow write: if isOperator() && isValidPhoto() && isOperationOwner(operationId);
+      allow delete: if false;
+    }
+  }
+}

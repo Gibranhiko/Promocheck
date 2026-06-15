@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+
+# Capacitor native projects (auto-generated, not source of truth)
+android
+ios
+
+.claude
+.agents
