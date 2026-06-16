@@ -1,8 +1,24 @@
 export type { UserRole } from "./UserRole"
-export type { OperationType } from "./OperationType"
 export type {
-  PhotoType,
-  LoadPhotoType,
-  UnloadPhotoType,
-} from "./PhotoType"
-export type { Operation, OperationStatus, LocalPhoto } from "./Operation"
+  VisitType,
+  VisitCondition,
+  VisitStatus,
+} from "./VisitType"
+export { VISIT_TYPE_LABELS, VISIT_CONDITION_LABELS } from "./VisitType"
+export type {
+  PhotoCategory,
+  PhotoRecord,
+  LocalPhoto,
+} from "./PhotoCategory"
+export {
+  PHOTO_CATEGORY_LABELS,
+  ALL_PHOTO_CATEGORIES,
+  DEFAULT_REQUIRED_CATEGORIES,
+} from "./PhotoCategory"
+export type { Visit } from "./Visit"
+export type {
+  Store,
+  StoreType,
+  VisitFrequency,
+} from "./Store"
+export { STORE_TYPE_LABELS, VISIT_FREQUENCY_LABELS } from "./Store"

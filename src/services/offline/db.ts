@@ -1,14 +1,16 @@
 import { openDB, type IDBPDatabase } from "idb"
-import type { Operation, LocalPhoto, OperationStatus } from "@/types/Operation"
+import type { Visit } from "@/types/Visit"
+import type { VisitStatus } from "@/types/VisitType"
+import type { LocalPhoto } from "@/types/PhotoCategory"
 
-const DB_NAME = "cargo-control"
+const DB_NAME = "promocheck"
 const DB_VERSION = 1
 
-export interface CargoControlDB {
-  operations: {
+export interface PromoCheckDB {
+  visits: {
     key: string
-    value: Operation
-    indexes: { "by-status": OperationStatus }
+    value: Visit
+    indexes: { "by-status": VisitStatus }
   }
   photos: {
     key: string
@@ -16,14 +18,14 @@ export interface CargoControlDB {
   }
 }
 
-let dbPromise: Promise<IDBPDatabase<CargoControlDB>> | null = null
+let dbPromise: Promise<IDBPDatabase<PromoCheckDB>> | null = null
 
 export function getDB() {
   if (!dbPromise) {
-    dbPromise = openDB<CargoControlDB>(DB_NAME, DB_VERSION, {
+    dbPromise = openDB<PromoCheckDB>(DB_NAME, DB_VERSION, {
       upgrade(db) {
-        const opStore = db.createObjectStore("operations", { keyPath: "id" })
-        opStore.createIndex("by-status", "status")
+        const visitStore = db.createObjectStore("visits", { keyPath: "id" })
+        visitStore.createIndex("by-status", "status")
 
         db.createObjectStore("photos", { keyPath: "id" })
       },
@@ -32,50 +34,50 @@ export function getDB() {
   return dbPromise
 }
 
-export async function saveOperationLocally(op: Operation): Promise<void> {
+export async function saveVisitLocally(visit: Visit): Promise<void> {
   const db = await getDB()
-  await db.put("operations", op)
+  await db.put("visits", visit)
 }
 
-export async function getLocalOperations(): Promise<Operation[]> {
+export async function getLocalVisits(): Promise<Visit[]> {
   const db = await getDB()
-  return db.getAll("operations")
+  return db.getAll("visits")
 }
 
-export async function getPendingOperations(): Promise<Operation[]> {
+export async function getPendingVisits(): Promise<Visit[]> {
   const db = await getDB()
-  return db.getAllFromIndex("operations", "by-status", "pending_sync")
+  return db.getAllFromIndex("visits", "by-status", "pending_sync")
 }
 
-export async function getErrorOperations(): Promise<Operation[]> {
+export async function getErrorVisits(): Promise<Visit[]> {
   const db = await getDB()
-  return db.getAllFromIndex("operations", "by-status", "error")
+  return db.getAllFromIndex("visits", "by-status", "error")
 }
 
-export async function markOperationSynced(id: string): Promise<void> {
+export async function markVisitSynced(id: string): Promise<void> {
   const db = await getDB()
-  const op = await db.get("operations", id)
-  if (op) {
-    await db.put("operations", { ...op, status: "synced", syncedAt: Date.now() })
+  const visit = await db.get("visits", id)
+  if (visit) {
+    await db.put("visits", { ...visit, status: "synced", syncedAt: Date.now() })
   }
 }
 
-export async function markOperationError(id: string, errorMessage: string): Promise<void> {
+export async function markVisitError(id: string, errorMessage: string): Promise<void> {
   const db = await getDB()
-  const op = await db.get("operations", id)
-  if (op) {
-    await db.put("operations", { ...op, status: "error", errorMessage })
+  const visit = await db.get("visits", id)
+  if (visit) {
+    await db.put("visits", { ...visit, status: "error", errorMessage })
   }
 }
 
-export async function getOperation(id: string): Promise<Operation | undefined> {
+export async function getVisit(id: string): Promise<Visit | undefined> {
   const db = await getDB()
-  return db.get("operations", id)
+  return db.get("visits", id)
 }
 
-export async function deleteOperation(id: string): Promise<void> {
+export async function deleteVisit(id: string): Promise<void> {
   const db = await getDB()
-  await db.delete("operations", id)
+  await db.delete("visits", id)
 }
 
 export async function savePhotoLocally(photo: LocalPhoto): Promise<void> {
@@ -83,10 +85,10 @@ export async function savePhotoLocally(photo: LocalPhoto): Promise<void> {
   await db.put("photos", photo)
 }
 
-export async function getPhotosForOperation(operationId: string): Promise<LocalPhoto[]> {
+export async function getPhotosForVisit(visitId: string): Promise<LocalPhoto[]> {
   const db = await getDB()
   const all = await db.getAll("photos")
-  return all.filter((p) => p.operationId === operationId)
+  return all.filter((p) => p.visitId === visitId)
 }
 
 export async function getPhoto(id: string): Promise<LocalPhoto | undefined> {
@@ -101,13 +103,13 @@ export async function deletePhoto(id: string): Promise<void> {
 
 export async function clearAllData(): Promise<void> {
   const db = await getDB()
-  await db.clear("operations")
+  await db.clear("visits")
   await db.clear("photos")
 }
 
 export class StorageQuotaExceededError extends Error {
   constructor() {
-    super("Storage quota exceeded. Please sync or delete some operations.")
+    super("Cuota de almacenamiento excedida. Sincroniza o elimina algunas visitas.")
     this.name = "StorageQuotaExceededError"
   }
 }
@@ -135,8 +137,8 @@ export async function cleanupSyncedPhotos(): Promise<number> {
 
   let deleted = 0
   for (const photo of all) {
-    const op = await db.get("operations", photo.operationId)
-    if (op?.status === "synced" || op?.status === "approved") {
+    const visit = await db.get("visits", photo.visitId)
+    if (visit?.status === "synced" || visit?.status === "approved") {
       await store.delete(photo.id)
       deleted++
     }

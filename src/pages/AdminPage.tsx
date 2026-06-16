@@ -8,14 +8,16 @@ import { EmptyState } from "@/shared/components/ui/EmptyState"
 import { useOnlineStatus } from "@/shared/hooks"
 import { useToast } from "@/shared/store/toastStore"
 import {
-  fetchOperationsPaginated,
-  fetchOperationsFiltered,
-  type OperationFilters,
-} from "@/features/operations/services/operationService"
-import { fetchActiveClients, type Client } from "@/features/admin/services/clientService"
+  fetchVisitsPaginated,
+  fetchVisitsFiltered,
+  type VisitFilters,
+} from "@/features/visits/services/visitService"
+import { fetchActiveStores } from "@/features/admin/services/storeService"
 import { formatDateTime } from "@/shared/utils"
 import { ADMIN_NAV } from "@/shared/constants/navItems"
-import type { Operation } from "@/types"
+import { VISIT_TYPE_LABELS, VISIT_CONDITION_LABELS } from "@/types/VisitType"
+import type { Visit } from "@/types"
+import type { Store } from "@/types/Store"
 import type { DocumentSnapshot } from "firebase/firestore"
 
 const PAGE_SIZE = 20
@@ -25,81 +27,72 @@ export function AdminPage() {
   const { isOnline, pendingCount, sync, isSyncing } = useOnlineStatus()
   const toast = useToast()
 
-  const [operations, setOperations] = useState<Operation[]>([])
+  const [visits, setVisits] = useState<Visit[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [nextPage, setNextPage] = useState<DocumentSnapshot | null>(null)
 
-  // Client-side filters (applied to loaded results)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [operatorFilter, setOperatorFilter] = useState("")
+  const [promoterFilter, setPromoterFilter] = useState("")
 
-  // Server-side filters (trigger a full reset + re-fetch when changed)
-  const [clientFilter, setClientFilter] = useState("")
+  const [storeFilter, setStoreFilter] = useState("")
   const [typeFilter, setTypeFilter] = useState("")
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
 
-  const [clients, setClients] = useState<Client[]>([])
+  const [stores, setStores] = useState<Store[]>([])
 
-  // Track server filter values to detect changes
-  const serverFilters: OperationFilters = {
-    clientId: clientFilter || undefined,
-    operationType: typeFilter || undefined,
+  const serverFilters: VisitFilters = {
+    storeId: storeFilter || undefined,
+    visitType: typeFilter || undefined,
     dateFrom: dateFrom ? new Date(dateFrom + "T00:00:00").getTime() : undefined,
     dateTo: dateTo ? new Date(dateTo + "T23:59:59").getTime() : undefined,
   }
   const serverFiltersRef = useRef(serverFilters)
 
   useEffect(() => {
-    fetchActiveClients().then(setClients).catch(() => {})
+    fetchActiveStores().then(setStores).catch(() => {})
   }, [])
 
-  const hasServerFilters = !!(clientFilter || typeFilter || dateFrom || dateTo)
+  const hasServerFilters = !!(storeFilter || typeFilter || dateFrom || dateTo)
 
-  const fetchPage = useCallback(async (
-    filters: OperationFilters,
-    cursor?: DocumentSnapshot
-  ) => {
-    const hasActive = !!(filters.clientId || filters.operationType || filters.dateFrom || filters.dateTo)
-    if (hasActive) {
-      return fetchOperationsFiltered(filters, cursor)
-    }
-    return fetchOperationsPaginated(cursor)
+  const fetchPage = useCallback(async (filters: VisitFilters, cursor?: DocumentSnapshot) => {
+    const hasActive = !!(filters.storeId || filters.visitType || filters.dateFrom || filters.dateTo)
+    if (hasActive) return fetchVisitsFiltered(filters, cursor)
+    return fetchVisitsPaginated(cursor)
   }, [])
 
-  const loadInitial = useCallback(async (filters: OperationFilters) => {
+  const loadInitial = useCallback(async (filters: VisitFilters) => {
     setIsLoading(true)
     try {
-      const { operations: ops, nextPage: next } = await fetchPage(filters)
-      setOperations(ops)
+      const { visits: vs, nextPage: next } = await fetchPage(filters)
+      setVisits(vs)
       setNextPage(next)
-      setHasMore(ops.length === PAGE_SIZE)
+      setHasMore(vs.length === PAGE_SIZE)
     } catch {
-      toast.error("Failed to load operations")
-      setOperations([])
+      toast.error("Error al cargar visitas")
+      setVisits([])
     } finally {
       setIsLoading(false)
     }
   }, [fetchPage, toast])
 
-  // Re-fetch from scratch whenever server-side filters change
   useEffect(() => {
     serverFiltersRef.current = serverFilters
     loadInitial(serverFilters)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clientFilter, typeFilter, dateFrom, dateTo])
+  }, [storeFilter, typeFilter, dateFrom, dateTo])
 
   const loadMore = useCallback(async () => {
     if (isLoadingMore || !hasMore || !nextPage) return
     setIsLoadingMore(true)
     try {
-      const { operations: ops, nextPage: next } = await fetchPage(serverFiltersRef.current, nextPage)
-      setOperations((prev) => [...prev, ...ops])
+      const { visits: vs, nextPage: next } = await fetchPage(serverFiltersRef.current, nextPage)
+      setVisits((prev) => [...prev, ...vs])
       setNextPage(next)
-      setHasMore(ops.length === PAGE_SIZE)
+      setHasMore(vs.length === PAGE_SIZE)
     } catch {
       // leave existing list intact
     } finally {
@@ -110,34 +103,34 @@ export function AdminPage() {
   const handleSync = async () => {
     await sync()
     await loadInitial(serverFiltersRef.current)
-    toast.success("Sync complete")
+    toast.success("Sincronización completa")
   }
 
-  const filteredOperations = useMemo(() => {
-    return operations.filter((op) => {
+  const filteredVisits = useMemo(() => {
+    return visits.filter((v) => {
       const matchesSearch = !searchQuery ||
-        op.orderNumber.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesStatus = statusFilter === "all" || op.status === statusFilter
-      const matchesOperator = !operatorFilter ||
-        op.operatorName.toLowerCase().includes(operatorFilter.toLowerCase())
-      return matchesSearch && matchesStatus && matchesOperator
+        v.storeName.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesStatus = statusFilter === "all" || v.status === statusFilter
+      const matchesPromoter = !promoterFilter ||
+        v.promoterName.toLowerCase().includes(promoterFilter.toLowerCase())
+      return matchesSearch && matchesStatus && matchesPromoter
     })
-  }, [operations, searchQuery, statusFilter, operatorFilter])
+  }, [visits, searchQuery, statusFilter, promoterFilter])
 
   const clearAllFilters = () => {
     setSearchQuery("")
     setStatusFilter("all")
-    setOperatorFilter("")
-    setClientFilter("")
+    setPromoterFilter("")
+    setStoreFilter("")
     setTypeFilter("")
     setDateFrom("")
     setDateTo("")
   }
 
-  const hasAnyFilter = searchQuery || statusFilter !== "all" || operatorFilter ||
-    clientFilter || typeFilter || dateFrom || dateTo
+  const hasAnyFilter = searchQuery || statusFilter !== "all" || promoterFilter ||
+    storeFilter || typeFilter || dateFrom || dateTo
 
-  const clientName = clients.find((c) => c.id === clientFilter)?.name
+  const storeName = stores.find((s) => s.id === storeFilter)?.name
 
   return (
     <AppShell title="Dashboard" navItems={ADMIN_NAV}>
@@ -150,9 +143,9 @@ export function AdminPage() {
                 ? <FiWifi className="w-4 h-4 text-green-600" />
                 : <FiWifiOff className="w-4 h-4 text-red-500" />
               }
-              <span className="text-sm text-gray-600">{isOnline ? "Online" : "Offline"}</span>
+              <span className="text-sm text-gray-600">{isOnline ? "En línea" : "Sin conexión"}</span>
               {pendingCount > 0 && (
-                <span className="text-sm text-warning">{pendingCount} pending</span>
+                <span className="text-sm text-warning">{pendingCount} pendiente(s)</span>
               )}
             </div>
             <button
@@ -161,19 +154,18 @@ export function AdminPage() {
               className="btn btn-secondary text-sm flex items-center gap-2"
             >
               <FiRefreshCw className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`} />
-              {isSyncing ? "Syncing…" : "Sync"}
+              {isSyncing ? "Sincronizando…" : "Sincronizar"}
             </button>
           </div>
 
           {/* Filters */}
           <div className="space-y-3 mb-4">
-            {/* Row 1: search + status + type */}
             <div className="flex gap-2 flex-wrap">
               <div className="relative flex-1 min-w-[160px]">
                 <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Order number…"
+                  placeholder="Buscar tienda…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="input pl-9 text-sm"
@@ -184,11 +176,11 @@ export function AdminPage() {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="input w-auto text-sm"
               >
-                <option value="all">All status</option>
-                <option value="pending_sync">Pending</option>
-                <option value="synced">Synced</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
+                <option value="all">Todos los estados</option>
+                <option value="pending_sync">Pendiente</option>
+                <option value="synced">Sincronizada</option>
+                <option value="approved">Aprobada</option>
+                <option value="rejected">Rechazada</option>
                 <option value="error">Error</option>
               </select>
               <select
@@ -196,29 +188,29 @@ export function AdminPage() {
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="input w-auto text-sm"
               >
-                <option value="">All types</option>
-                <option value="load">Load</option>
-                <option value="unload">Unload</option>
+                <option value="">Todos los tipos</option>
+                <option value="routine">Rutina</option>
+                <option value="audit">Auditoría</option>
+                <option value="special_event">Evento especial</option>
               </select>
             </div>
 
-            {/* Row 2: client + operator + date range */}
             <div className="flex gap-2 flex-wrap">
               <select
-                value={clientFilter}
-                onChange={(e) => setClientFilter(e.target.value)}
+                value={storeFilter}
+                onChange={(e) => setStoreFilter(e.target.value)}
                 className="input w-auto text-sm flex-1 min-w-[140px]"
               >
-                <option value="">All clients</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                <option value="">Todas las tiendas</option>
+                {stores.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
               <input
                 type="text"
-                placeholder="Operator name…"
-                value={operatorFilter}
-                onChange={(e) => setOperatorFilter(e.target.value)}
+                placeholder="Nombre de promotora…"
+                value={promoterFilter}
+                onChange={(e) => setPromoterFilter(e.target.value)}
                 className="input text-sm flex-1 min-w-[140px]"
               />
               <input
@@ -226,41 +218,40 @@ export function AdminPage() {
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
                 className="input w-auto text-sm"
-                aria-label="From date"
+                aria-label="Desde"
               />
               <input
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
                 className="input w-auto text-sm"
-                aria-label="To date"
+                aria-label="Hasta"
               />
               {hasAnyFilter && (
                 <button onClick={clearAllFilters} className="btn btn-secondary text-sm">
-                  <FiX className="w-4 h-4" /> Clear
+                  <FiX className="w-4 h-4" /> Limpiar
                 </button>
               )}
             </div>
 
-            {/* Active server-side filter chips */}
             {hasServerFilters && (
               <div className="flex gap-2 flex-wrap text-xs">
-                {clientName && (
+                {storeName && (
                   <span className="bg-primary-100 text-primary px-2 py-1 rounded-full">
-                    Client: {clientName}
+                    Tienda: {storeName}
                   </span>
                 )}
                 {typeFilter && (
                   <span className="bg-primary-100 text-primary px-2 py-1 rounded-full capitalize">
-                    Type: {typeFilter}
+                    Tipo: {VISIT_TYPE_LABELS[typeFilter as keyof typeof VISIT_TYPE_LABELS] ?? typeFilter}
                   </span>
                 )}
                 {(dateFrom || dateTo) && (
                   <span className="bg-primary-100 text-primary px-2 py-1 rounded-full">
-                    {dateFrom && dateTo ? `${dateFrom} – ${dateTo}` : dateFrom ? `From ${dateFrom}` : `Until ${dateTo}`}
+                    {dateFrom && dateTo ? `${dateFrom} – ${dateTo}` : dateFrom ? `Desde ${dateFrom}` : `Hasta ${dateTo}`}
                   </span>
                 )}
-                <span className="text-gray-400 italic">Filtered from Firestore</span>
+                <span className="text-gray-400 italic">Filtrado desde Firestore</span>
               </div>
             )}
           </div>
@@ -271,29 +262,28 @@ export function AdminPage() {
               <table className="w-full">
                 <thead>
                   <tr className="text-left text-sm text-gray-500 border-b">
-                    <th className="pb-3 font-medium">Order #</th>
-                    <th className="pb-3 font-medium">Client</th>
-                    <th className="pb-3 font-medium">Door</th>
-                    <th className="pb-3 font-medium">Type</th>
-                    <th className="pb-3 font-medium">Operator</th>
-                    <th className="pb-3 font-medium">Status</th>
-                    <th className="pb-3 font-medium">Date</th>
+                    <th className="pb-3 font-medium">Tienda</th>
+                    <th className="pb-3 font-medium">Tipo</th>
+                    <th className="pb-3 font-medium">Promotora</th>
+                    <th className="pb-3 font-medium">Condición</th>
+                    <th className="pb-3 font-medium">Estado</th>
+                    <th className="pb-3 font-medium">Fecha</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Array.from({ length: 6 }).map((_, i) => (
-                    <SkeletonTableRow key={i} cols={7} />
+                    <SkeletonTableRow key={i} cols={6} />
                   ))}
                 </tbody>
               </table>
             </div>
-          ) : filteredOperations.length === 0 ? (
+          ) : filteredVisits.length === 0 ? (
             <EmptyState
               icon="🔍"
-              title={hasAnyFilter ? "No results found" : "No operations yet"}
-              description={hasAnyFilter ? "Try adjusting your filters." : undefined}
+              title={hasAnyFilter ? "Sin resultados" : "Sin visitas aún"}
+              description={hasAnyFilter ? "Ajusta los filtros." : undefined}
               action={hasAnyFilter
-                ? <button className="btn btn-secondary" onClick={clearAllFilters}>Clear filters</button>
+                ? <button className="btn btn-secondary" onClick={clearAllFilters}>Limpiar filtros</button>
                 : undefined
               }
             />
@@ -303,29 +293,34 @@ export function AdminPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="text-left text-sm text-gray-500 border-b">
-                      <th className="pb-3 font-medium">Order #</th>
-                      <th className="pb-3 font-medium">Client</th>
-                      <th className="pb-3 font-medium">Door</th>
-                      <th className="pb-3 font-medium">Type</th>
-                      <th className="pb-3 font-medium">Operator</th>
-                      <th className="pb-3 font-medium">Status</th>
-                      <th className="pb-3 font-medium">Date</th>
+                      <th className="pb-3 font-medium">Tienda</th>
+                      <th className="pb-3 font-medium">Tipo</th>
+                      <th className="pb-3 font-medium">Promotora</th>
+                      <th className="pb-3 font-medium">Condición</th>
+                      <th className="pb-3 font-medium">Estado</th>
+                      <th className="pb-3 font-medium">Fecha</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredOperations.map((op) => (
+                    {filteredVisits.map((v) => (
                       <tr
-                        key={op.id}
-                        onClick={() => navigate(`/operation/${op.id}`)}
-                        className={`border-b last:border-b-0 hover:bg-gray-50 cursor-pointer ${op.status === "rejected" ? "bg-red-50" : ""}`}
+                        key={v.id}
+                        onClick={() => navigate(`/visit/${v.id}`)}
+                        className={`border-b last:border-b-0 hover:bg-gray-50 cursor-pointer ${v.status === "rejected" ? "bg-red-50" : ""}`}
                       >
-                        <td className="py-3 font-medium">{op.orderNumber}</td>
-                        <td className="py-3 text-sm text-gray-600">{op.clientName || "—"}</td>
-                        <td className="py-3">{op.doorNumber}</td>
-                        <td className="py-3 capitalize text-sm">{op.operationType}</td>
-                        <td className="py-3 text-sm">{op.operatorName}</td>
-                        <td className="py-3"><StatusBadge status={op.status} /></td>
-                        <td className="py-3 text-sm text-gray-500">{formatDateTime(op.createdAt)}</td>
+                        <td className="py-3 font-medium">{v.storeName}</td>
+                        <td className="py-3 text-sm capitalize">
+                          {VISIT_TYPE_LABELS[v.visitType] ?? v.visitType}
+                        </td>
+                        <td className="py-3 text-sm">{v.promoterName}</td>
+                        <td className="py-3 text-sm">
+                          {v.overallCondition
+                            ? VISIT_CONDITION_LABELS[v.overallCondition]
+                            : "—"
+                          }
+                        </td>
+                        <td className="py-3"><StatusBadge status={v.status} /></td>
+                        <td className="py-3 text-sm text-gray-500">{formatDateTime(v.createdAt)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -334,9 +329,9 @@ export function AdminPage() {
 
               <div className="mt-3 flex items-center justify-between">
                 <span className="text-xs text-gray-400">
-                  {filteredOperations.length} shown
-                  {operations.length !== filteredOperations.length && ` (${operations.length} loaded)`}
-                  {hasMore && " · more available"}
+                  {filteredVisits.length} mostradas
+                  {visits.length !== filteredVisits.length && ` (${visits.length} cargadas)`}
+                  {hasMore && " · hay más"}
                 </span>
                 {hasMore && (
                   <button
@@ -344,7 +339,7 @@ export function AdminPage() {
                     disabled={isLoadingMore}
                     className="btn btn-secondary text-sm"
                   >
-                    {isLoadingMore ? "Loading…" : "Load more"}
+                    {isLoadingMore ? "Cargando…" : "Cargar más"}
                   </button>
                 )}
               </div>

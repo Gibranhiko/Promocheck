@@ -49,9 +49,9 @@ export function AdminUsersPage() {
       setUsers((prev) =>
         prev.map((u) => (u.uid === confirmDeleteUid ? { ...u, active: false } : u))
       )
-      toast.success("User deactivated")
+      toast.success("Usuario desactivado")
     } catch {
-      toast.error("Failed to deactivate user")
+      toast.error("Error al desactivar usuario")
     } finally {
       setIsDeleting(false)
       setConfirmDeleteUid(null)
@@ -82,8 +82,11 @@ export function AdminUsersPage() {
           {user.name && (
             <p className="text-sm text-gray-500 truncate">{user.email}</p>
           )}
+          <p className="text-xs text-gray-400">
+            {user.role === "admin" ? "Administrador" : "Promotora"}
+          </p>
           {isInactive && (
-            <span className="text-xs text-red-500 font-medium">Inactive</span>
+            <span className="text-xs text-red-500 font-medium">Inactivo</span>
           )}
         </div>
         {!isInactive && (
@@ -91,7 +94,7 @@ export function AdminUsersPage() {
             <button
               onClick={() => setEditingUser(user)}
               className="p-2 rounded-lg hover:bg-surface-tertiary text-gray-500"
-              aria-label="Edit user"
+              aria-label="Editar usuario"
             >
               <FiEdit2 className="w-4 h-4" />
             </button>
@@ -99,7 +102,7 @@ export function AdminUsersPage() {
               <button
                 onClick={() => setConfirmDeleteUid(user.uid)}
                 className="p-2 rounded-lg hover:bg-red-50 text-red-400"
-                aria-label="Deactivate user"
+                aria-label="Desactivar usuario"
               >
                 <FiTrash2 className="w-4 h-4" />
               </button>
@@ -112,7 +115,7 @@ export function AdminUsersPage() {
 
   return (
     <AppShell
-      title="Users"
+      title="Usuarios"
       navItems={ADMIN_NAV}
       headerRight={
         <button
@@ -120,7 +123,7 @@ export function AdminUsersPage() {
           className="btn btn-primary text-sm"
         >
           <FiPlus className="w-4 h-4" />
-          New User
+          Nuevo usuario
         </button>
       }
     >
@@ -129,14 +132,14 @@ export function AdminUsersPage() {
       ) : users.length === 0 ? (
         <EmptyState
           icon="👥"
-          title="No users yet"
-          description="Create the first operator account."
+          title="Sin usuarios aún"
+          description="Crea la primera cuenta de promotora."
           action={
             <button
               className="btn btn-primary"
               onClick={() => setShowCreateModal(true)}
             >
-              <FiPlus className="w-4 h-4" /> New User
+              <FiPlus className="w-4 h-4" /> Nuevo usuario
             </button>
           }
         />
@@ -149,7 +152,7 @@ export function AdminUsersPage() {
           {inactiveUsers.length > 0 && (
             <div>
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
-                Inactive ({inactiveUsers.length})
+                Inactivos ({inactiveUsers.length})
               </p>
               <div className="space-y-3">
                 {inactiveUsers.map(renderUserCard)}
@@ -177,14 +180,13 @@ export function AdminUsersPage() {
         />
       )}
 
-      {/* Delete confirmation dialog */}
       {confirmDeleteUid && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-card-elevated p-6 space-y-4">
-            <h2 className="font-bold text-gray-900">Deactivate User?</h2>
+            <h2 className="font-bold text-gray-900">¿Desactivar usuario?</h2>
             <p className="text-sm text-gray-600">
-              This user will be marked as inactive and will no longer be able to use the app.
-              This action can be reversed by an admin.
+              El usuario quedará inactivo y no podrá usar la app.
+              Un administrador puede reactivarlo después.
             </p>
             <div className="flex gap-3">
               <button
@@ -192,14 +194,14 @@ export function AdminUsersPage() {
                 className="btn btn-secondary flex-1"
                 disabled={isDeleting}
               >
-                Cancel
+                Cancelar
               </button>
               <button
                 onClick={handleDeleteConfirm}
                 disabled={isDeleting}
                 className="btn flex-1 bg-red-600 text-white hover:bg-red-700"
               >
-                {isDeleting ? "Deactivating…" : "Deactivate"}
+                {isDeleting ? "Desactivando…" : "Desactivar"}
               </button>
             </div>
           </div>

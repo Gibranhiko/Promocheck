@@ -3,15 +3,15 @@ import { useAuth } from "@/features/auth/hooks"
 import { ProtectedRoute } from "@/shared/components/layout/ProtectedRoute"
 import { LoginPage } from "@/pages/LoginPage"
 import { PendingApprovalPage } from "@/pages/PendingApprovalPage"
-import { OperatorPage } from "@/pages/OperatorPage"
+import { PromoterPage } from "@/pages/PromoterPage"
 import { AdminPage } from "@/pages/AdminPage"
-import { OperationFormPage } from "@/pages/OperationFormPage"
-import { OperationDetailPage } from "@/pages/OperationDetailPage"
+import { VisitFormPage } from "@/pages/VisitFormPage"
+import { VisitDetailPage } from "@/pages/VisitDetailPage"
 import { DashboardPage } from "@/pages/DashboardPage"
 import { AccountPage } from "@/pages/AccountPage"
-import { OperatorHistoryPage } from "@/pages/OperatorHistoryPage"
+import { PromoterHistoryPage } from "@/pages/PromoterHistoryPage"
 import { AdminUsersPage } from "@/pages/AdminUsersPage"
-import { AdminClientsPage } from "@/pages/AdminClientsPage"
+import { AdminStoresPage } from "@/pages/AdminStoresPage"
 
 function AuthProvider() {
   useAuth()
@@ -35,12 +35,12 @@ const router = createBrowserRouter([
         path: "/unauthorized",
         element: (
           <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
-            <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
+            <h1 className="text-2xl font-bold mb-2">Acceso denegado</h1>
             <p className="text-gray-600 mb-4">
-              You do not have permission to view this page.
+              No tienes permiso para ver esta página.
             </p>
             <a href="/login" className="btn btn-primary">
-              Go to Login
+              Ir al inicio de sesión
             </a>
           </div>
         ),
@@ -63,31 +63,31 @@ const router = createBrowserRouter([
             element: <AccountPage />,
           },
           {
-            path: "/operation/:id",
-            element: <OperationDetailPage />,
+            path: "/visit/:id",
+            element: <VisitDetailPage />,
           },
         ],
       },
 
-      // Operator-only routes
+      // Promoter-only routes
       {
         element: <ProtectedRoute allowedRoles={["operator"]} />,
         children: [
           {
-            path: "/operator",
-            element: <OperatorPage />,
+            path: "/promoter",
+            element: <PromoterPage />,
           },
           {
-            path: "/operation/new",
-            element: <OperationFormPage />,
+            path: "/visit/new",
+            element: <VisitFormPage />,
           },
           {
-            path: "/operation/:id/edit",
-            element: <OperationFormPage />,
+            path: "/visit/:id/edit",
+            element: <VisitFormPage />,
           },
           {
-            path: "/operator/history",
-            element: <OperatorHistoryPage />,
+            path: "/promoter/history",
+            element: <PromoterHistoryPage />,
           },
         ],
       },
@@ -105,8 +105,8 @@ const router = createBrowserRouter([
             element: <AdminUsersPage />,
           },
           {
-            path: "/admin/clients",
-            element: <AdminClientsPage />,
+            path: "/admin/stores",
+            element: <AdminStoresPage />,
           },
         ],
       },

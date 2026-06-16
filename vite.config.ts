@@ -10,9 +10,9 @@ export default defineConfig({
       registerType: "prompt",
       includeAssets: ["favicon.ico", "icons/*.png"],
       manifest: {
-        name: "Cargo Control",
-        short_name: "CargoCtrl",
-        description: "Cargo operations management for operators and admins",
+        name: "PromoCheck",
+        short_name: "PromoCheck",
+        description: "CRM para promotoras de campo — visitas, evidencias y stock",
         theme_color: "#1e40af",
         background_color: "#ffffff",
         display: "standalone",
@@ -41,9 +41,9 @@ export default defineConfig({
         categories: ["business", "productivity"],
         shortcuts: [
           {
-            name: "New Operation",
-            url: "/operator?action=new",
-            description: "Start a new cargo operation",
+            name: "Nueva Visita",
+            url: "/promoter?action=new",
+            description: "Registrar una nueva visita a tienda",
           },
         ],
       },

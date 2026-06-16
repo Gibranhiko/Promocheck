@@ -20,9 +20,8 @@ export function DashboardPage() {
     if (user.role === "admin") {
       navigate("/admin", { replace: true })
     } else if (user.role === "operator") {
-      navigate("/operator", { replace: true })
+      navigate("/promoter", { replace: true })
     } else {
-      // role is null - user exists in Auth but not in Firestore users collection
       navigate("/pending-approval", { replace: true })
     }
   }, [user, isLoading, navigate])
@@ -31,7 +30,7 @@ export function DashboardPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="flex flex-col items-center gap-4">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-gray-500 text-sm">Loading...</p>
+        <p className="text-gray-500 text-sm">Cargando…</p>
       </div>
     </div>
   )

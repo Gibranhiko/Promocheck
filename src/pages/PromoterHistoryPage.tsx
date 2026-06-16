@@ -6,16 +6,17 @@ import { SkeletonList } from "@/shared/components/ui/Skeleton"
 import { EmptyState } from "@/shared/components/ui/EmptyState"
 import { formatDateTime } from "@/shared/utils"
 import { useAuthStore } from "@/features/auth/store/authStore"
-import { getLocalOperations } from "@/services/offline"
-import { fetchOperationsByOperator } from "@/features/operations/services/operationService"
-import { OPERATOR_NAV } from "@/shared/constants/navItems"
-import type { Operation } from "@/types"
+import { getLocalVisits } from "@/services/offline/db"
+import { fetchVisitsByPromoter } from "@/features/visits/services/visitService"
+import { PROMOTER_NAV } from "@/shared/constants/navItems"
+import { VISIT_TYPE_LABELS } from "@/types/VisitType"
+import type { Visit } from "@/types/Visit"
 import type { DocumentSnapshot } from "firebase/firestore"
 
-export function OperatorHistoryPage() {
+export function PromoterHistoryPage() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const [operations, setOperations] = useState<Operation[]>([])
+  const [visits, setVisits] = useState<Visit[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [nextPage, setNextPage] = useState<DocumentSnapshot | null>(null)
@@ -25,25 +26,23 @@ export function OperatorHistoryPage() {
     setIsLoading(true)
     try {
       const [localResult, serverResult] = await Promise.allSettled([
-        getLocalOperations(),
-        fetchOperationsByOperator(user.uid),
+        getLocalVisits(),
+        fetchVisitsByPromoter(user.uid),
       ])
 
-      const localOps = localResult.status === "fulfilled" ? localResult.value : []
-      const { operations: serverOps, nextPage: next } =
+      const localVisits = localResult.status === "fulfilled" ? localResult.value : []
+      const { visits: serverVisits, nextPage: next } =
         serverResult.status === "fulfilled"
           ? serverResult.value
-          : { operations: [], nextPage: null }
+          : { visits: [], nextPage: null }
 
-      const map = new Map<string, Operation>()
-      for (const op of [...serverOps, ...localOps]) {
-        const key = op.localId || op.id
-        if (!map.has(key) || op.status === "pending_sync") map.set(key, op)
+      const map = new Map<string, Visit>()
+      for (const v of [...serverVisits, ...localVisits]) {
+        const key = v.localId || v.id
+        if (!map.has(key) || v.status === "pending_sync") map.set(key, v)
       }
 
-      setOperations(
-        Array.from(map.values()).sort((a, b) => b.createdAt - a.createdAt)
-      )
+      setVisits(Array.from(map.values()).sort((a, b) => b.createdAt - a.createdAt))
       setNextPage(next)
     } finally {
       setIsLoading(false)
@@ -56,12 +55,12 @@ export function OperatorHistoryPage() {
     if (!user || !nextPage || isLoadingMore) return
     setIsLoadingMore(true)
     try {
-      const { operations: more, nextPage: next } = await fetchOperationsByOperator(user.uid, nextPage)
-      setOperations((prev) => {
-        const map = new Map(prev.map((op) => [op.localId || op.id, op]))
-        for (const op of more) {
-          const key = op.localId || op.id
-          if (!map.has(key)) map.set(key, op)
+      const { visits: more, nextPage: next } = await fetchVisitsByPromoter(user.uid, nextPage)
+      setVisits((prev) => {
+        const map = new Map(prev.map((v) => [v.localId || v.id, v]))
+        for (const v of more) {
+          const key = v.localId || v.id
+          if (!map.has(key)) map.set(key, v)
         }
         return Array.from(map.values()).sort((a, b) => b.createdAt - a.createdAt)
       })
@@ -72,32 +71,32 @@ export function OperatorHistoryPage() {
   }
 
   return (
-    <AppShell title="History" navItems={OPERATOR_NAV}>
+    <AppShell title="Historial" navItems={PROMOTER_NAV}>
       {isLoading ? (
         <SkeletonList count={5} />
-      ) : operations.length === 0 ? (
+      ) : visits.length === 0 ? (
         <EmptyState
           icon="📂"
-          title="No operations yet"
-          description="Your completed loads and unloads will appear here."
+          title="Sin visitas aún"
+          description="Tus visitas registradas aparecerán aquí."
         />
       ) : (
         <div className="space-y-3">
-          {operations.map((op) => (
+          {visits.map((visit) => (
             <button
-              key={op.id}
-              onClick={() => navigate(`/operation/${op.id}`)}
+              key={visit.id}
+              onClick={() => navigate(`/visit/${visit.id}`)}
               className="card-interactive w-full text-left"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-semibold text-gray-900">{op.orderNumber}</p>
+                  <p className="font-semibold text-gray-900">{visit.storeName}</p>
                   <p className="text-sm text-gray-500 mt-0.5">
-                    Door {op.doorNumber} · <span className="capitalize">{op.operationType}</span>
+                    {VISIT_TYPE_LABELS[visit.visitType]}
                   </p>
-                  <p className="text-xs text-gray-400 mt-0.5">{formatDateTime(op.createdAt)}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{formatDateTime(visit.createdAt)}</p>
                 </div>
-                <StatusBadge status={op.status} />
+                <StatusBadge status={visit.status} />
               </div>
             </button>
           ))}
@@ -108,7 +107,7 @@ export function OperatorHistoryPage() {
               disabled={isLoadingMore}
               className="btn btn-secondary w-full"
             >
-              {isLoadingMore ? "Loading…" : "Load More"}
+              {isLoadingMore ? "Cargando…" : "Cargar más"}
             </button>
           )}
         </div>

@@ -8,7 +8,7 @@ import {
   runSyncEngine,
   type SyncResult,
 } from "@/services/offline/syncEngine"
-import { getPendingOperations } from "@/services/offline/db"
+import { getPendingVisits } from "@/services/offline/db"
 import { useToast } from "@/shared/store/toastStore"
 
 interface OnlineStatusState {
@@ -19,7 +19,7 @@ interface OnlineStatusState {
   lastSyncResults: SyncResult[]
   backgroundSyncSupported: boolean
   uploadProgress: { uploaded: number; total: number } | null
-  syncingOperationId: string | null
+  syncingVisitId: string | null
 }
 
 export function useOnlineStatus() {
@@ -32,44 +32,44 @@ export function useOnlineStatus() {
     lastSyncResults: [],
     backgroundSyncSupported: false,
     uploadProgress: null,
-    syncingOperationId: null,
+    syncingVisitId: null,
   })
 
   const refreshPendingCount = useCallback(async () => {
-    const pending = await getPendingOperations()
+    const pending = await getPendingVisits()
     setState((s) => ({ ...s, pendingCount: pending.length }))
   }, [])
 
   const sync = useCallback(async () => {
     if (!navigator.onLine || state.isSyncing) return
 
-    setState((s) => ({ ...s, isSyncing: true, uploadProgress: null, syncingOperationId: null }))
+    setState((s) => ({ ...s, isSyncing: true, uploadProgress: null, syncingVisitId: null }))
     try {
       const results = await runSyncEngine(
         (uploaded, total) => {
           setState((s) => ({ ...s, uploadProgress: { uploaded, total } }))
         },
         (operationId) => {
-          setState((s) => ({ ...s, syncingOperationId: operationId, uploadProgress: null }))
+          setState((s) => ({ ...s, syncingVisitId: operationId, uploadProgress: null }))
         }
       )
       setState((s) => ({
         ...s,
         isSyncing: false,
         uploadProgress: null,
-        syncingOperationId: null,
+        syncingVisitId: null,
         lastSyncAt: Date.now(),
         lastSyncResults: results,
       }))
       const failed = results.filter((r) => !r.success)
       if (failed.length > 0) {
         const reason = failed[0].error ?? "Unknown error"
-        toast.error(`${failed.length} operation(s) failed to sync: ${reason}`)
+        toast.error(`${failed.length} visita(s) no se pudieron sincronizar: ${reason}`)
       }
     } catch (err) {
       const reason = err instanceof Error ? err.message : "Unknown error"
-      toast.error(`Sync error: ${reason}`)
-      setState((s) => ({ ...s, isSyncing: false, uploadProgress: null, syncingOperationId: null }))
+      toast.error(`Error de sincronización: ${reason}`)
+      setState((s) => ({ ...s, isSyncing: false, uploadProgress: null, syncingVisitId: null }))
     }
     await refreshPendingCount()
   }, [state.isSyncing, refreshPendingCount, toast])

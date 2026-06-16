@@ -21,13 +21,15 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
     }
 
-    function isOperationOwner(operationId) {
-      return firestore.get(/databases/(default)/documents/operations/$(operationId)).data.operatorId == request.auth.uid;
+    function isVisitOwner(visitId) {
+      return firestore.get(/databases/(default)/documents/visits/$(visitId)).data.promoterId == request.auth.uid;
     }
 
-    match /operations/{operationId}/{photoType} {
-      allow read: if isAdmin() || (isOperator() && isOperationOwner(operationId));
-      allow write: if isOperator() && isValidPhoto() && isOperationOwner(operationId);
+    // Path: visits/{visitId}/{fileName}
+    // fileName format: {category}_{sequence}_{timestamp}.jpg
+    match /visits/{visitId}/{fileName} {
+      allow read: if isAdmin() || (isOperator() && isVisitOwner(visitId));
+      allow write: if isOperator() && isValidPhoto() && isVisitOwner(visitId);
       allow delete: if false;
     }
   }

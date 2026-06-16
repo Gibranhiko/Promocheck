@@ -5,96 +5,93 @@ import { AppShell } from "@/shared/components/layout/AppShell"
 import { StatusBadge } from "@/shared/components/ui/StatusBadge"
 import { SkeletonList } from "@/shared/components/ui/Skeleton"
 import { EmptyState } from "@/shared/components/ui/EmptyState"
-import { OperationFAB } from "@/shared/components/ui/FAB"
+import { VisitFAB } from "@/shared/components/ui/FAB"
 import { formatRelativeTime } from "@/shared/utils"
 import { useOnlineStatus } from "@/shared/hooks"
 import { useToast } from "@/shared/store/toastStore"
 import { useAuth } from "@/features/auth/hooks"
-import { getLocalOperations } from "@/services/offline"
-import { fetchOperationsByOperator } from "@/features/operations/services/operationService"
-import { OPERATOR_NAV } from "@/shared/constants/navItems"
-import type { Operation } from "@/types"
+import { getLocalVisits } from "@/services/offline/db"
+import { fetchVisitsByPromoter } from "@/features/visits/services/visitService"
+import { PROMOTER_NAV } from "@/shared/constants/navItems"
+import { VISIT_TYPE_LABELS } from "@/types/VisitType"
+import type { Visit } from "@/types/Visit"
 
-// Statuses that allow the operator to open and edit the operation
 const EDITABLE_STATUSES = new Set(["pending_sync", "synced", "rejected"])
 
-export function OperatorPage() {
-  const { isOnline, pendingCount, isSyncing, uploadProgress, syncingOperationId, sync } = useOnlineStatus()
+export function PromoterPage() {
+  const { isOnline, pendingCount, isSyncing, uploadProgress, syncingVisitId, sync } = useOnlineStatus()
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [recentOperations, setRecentOperations] = useState<Operation[]>([])
-  const [isLoadingOps, setIsLoadingOps] = useState(true)
+  const [recentVisits, setRecentVisits] = useState<Visit[]>([])
+  const [isLoadingVisits, setIsLoadingVisits] = useState(true)
   const toast = useToast()
 
-  const loadRecentOperations = useCallback(async () => {
+  const loadRecentVisits = useCallback(async () => {
     const [localResult, serverResult] = await Promise.allSettled([
-      getLocalOperations(),
+      getLocalVisits(),
       user
-        ? fetchOperationsByOperator(user.uid)
-        : Promise.resolve({ operations: [] as Operation[], nextPage: null }),
+        ? fetchVisitsByPromoter(user.uid)
+        : Promise.resolve({ visits: [] as Visit[], nextPage: null }),
     ])
 
-    const localOps = localResult.status === "fulfilled" ? localResult.value : []
-    const serverOps = serverResult.status === "fulfilled" ? serverResult.value.operations : []
+    const localVisits = localResult.status === "fulfilled" ? localResult.value : []
+    const serverVisits = serverResult.status === "fulfilled" ? serverResult.value.visits : []
 
-    const map = new Map<string, Operation>()
-    for (const op of [...serverOps, ...localOps]) {
-      const key = op.localId || op.id
-      if (!map.has(key) || op.status === "pending_sync") map.set(key, op)
+    const map = new Map<string, Visit>()
+    for (const v of [...serverVisits, ...localVisits]) {
+      const key = v.localId || v.id
+      if (!map.has(key) || v.status === "pending_sync") map.set(key, v)
     }
 
     const sorted = Array.from(map.values())
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, 5)
-    setRecentOperations(sorted)
-    setIsLoadingOps(false)
+    setRecentVisits(sorted)
+    setIsLoadingVisits(false)
   }, [user])
 
-  useEffect(() => {
-    loadRecentOperations()
-  }, [loadRecentOperations])
+  useEffect(() => { loadRecentVisits() }, [loadRecentVisits])
 
   useEffect(() => {
     if (isOnline) sync()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
-    if (!isSyncing) loadRecentOperations()
-  }, [isSyncing, loadRecentOperations])
+    if (!isSyncing) loadRecentVisits()
+  }, [isSyncing, loadRecentVisits])
 
   const handleSync = async () => {
     await sync()
-    await loadRecentOperations()
-    toast.success("Sync complete")
+    await loadRecentVisits()
+    toast.success("Sincronización completada")
   }
 
-  const handleOperationTap = (op: Operation) => {
-    if (EDITABLE_STATUSES.has(op.status)) {
-      navigate(`/operation/${op.id}/edit`)
+  const handleVisitTap = (visit: Visit) => {
+    if (EDITABLE_STATUSES.has(visit.status)) {
+      navigate(`/visit/${visit.id}/edit`)
     }
   }
 
-  // Sort rejected operations to the top
-  const rejectedOps = recentOperations.filter((op) => op.status === "rejected")
-  const otherOps = recentOperations.filter((op) => op.status !== "rejected")
-  const sortedOperations = [...rejectedOps, ...otherOps]
+  const rejectedVisits = recentVisits.filter((v) => v.status === "rejected")
+  const otherVisits = recentVisits.filter((v) => v.status !== "rejected")
+  const sortedVisits = [...rejectedVisits, ...otherVisits]
 
   return (
-    <AppShell title="Home" navItems={OPERATOR_NAV}>
+    <AppShell title="Inicio" navItems={PROMOTER_NAV}>
       <div className="space-y-6">
-        {/* Rejected operations alert banner */}
-        {rejectedOps.length > 0 && (
+        {/* Rejected visits alert */}
+        {rejectedVisits.length > 0 && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
             <FiAlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-red-700">
-                {rejectedOps.length === 1
-                  ? "1 operation was rejected"
-                  : `${rejectedOps.length} operations were rejected`}
+                {rejectedVisits.length === 1
+                  ? "1 visita fue rechazada"
+                  : `${rejectedVisits.length} visitas fueron rechazadas`}
               </p>
               <p className="text-xs text-red-600 mt-0.5">
-                Tap the operation below to see the reason and re-submit.
+                Toca la visita para ver el motivo y re-enviarla.
               </p>
             </div>
           </div>
@@ -114,14 +111,14 @@ export function OperatorPage() {
               </div>
               <div>
                 <p className="font-semibold text-gray-900">
-                  {isOnline ? "Online" : "Offline"}
+                  {isOnline ? "En línea" : "Sin conexión"}
                 </p>
                 <p className="text-sm text-gray-500">
                   {isSyncing
-                    ? "Uploading…"
+                    ? "Subiendo…"
                     : pendingCount > 0
-                    ? `${pendingCount} pending sync`
-                    : "All synced"}
+                    ? `${pendingCount} pendiente(s) de sincronizar`
+                    : "Todo sincronizado"}
                 </p>
               </div>
             </div>
@@ -132,37 +129,35 @@ export function OperatorPage() {
                 className="btn btn-secondary"
               >
                 <FiRefreshCw className="w-4 h-4" />
-                Sync
+                Sincronizar
               </button>
             )}
           </div>
         </div>
 
-        {/* Recent operations */}
+        {/* Recent visits */}
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="section-title">Recent Operations</h2>
-          </div>
+          <h2 className="section-title mb-3">Visitas recientes</h2>
 
-          {isLoadingOps ? (
+          {isLoadingVisits ? (
             <SkeletonList count={3} />
-          ) : sortedOperations.length === 0 ? (
+          ) : sortedVisits.length === 0 ? (
             <EmptyState
               icon="📋"
-              title="No operations yet"
-              description="Tap the + button to record your first load or unload."
+              title="Sin visitas aún"
+              description="Toca el botón + para registrar tu primera visita."
             />
           ) : (
             <div className="space-y-3">
-              {sortedOperations.map((op) => {
-                const isUploadingThis = syncingOperationId === op.id
-                const isRejected = op.status === "rejected"
-                const isEditable = EDITABLE_STATUSES.has(op.status)
+              {sortedVisits.map((visit) => {
+                const isUploadingThis = syncingVisitId === visit.id
+                const isRejected = visit.status === "rejected"
+                const isEditable = EDITABLE_STATUSES.has(visit.status)
 
                 return (
                   <div
-                    key={op.id}
-                    onClick={() => handleOperationTap(op)}
+                    key={visit.id}
+                    onClick={() => handleVisitTap(visit)}
                     className={`card transition-colors ${
                       isRejected
                         ? "border border-red-200 bg-red-50"
@@ -173,21 +168,20 @@ export function OperatorPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900">{op.orderNumber}</p>
+                        <p className="font-semibold text-gray-900">{visit.storeName}</p>
                         <p className="text-sm text-gray-500 mt-0.5">
-                          Door {op.doorNumber} · <span className="capitalize">{op.operationType}</span> · {formatRelativeTime(op.createdAt)}
+                          {VISIT_TYPE_LABELS[visit.visitType]} · {formatRelativeTime(visit.createdAt)}
                         </p>
                       </div>
                       <div className="flex-shrink-0 ml-3">
-                        <StatusBadge status={op.status} />
+                        <StatusBadge status={visit.status} />
                       </div>
                     </div>
 
-                    {/* Rejection reason inline */}
-                    {isRejected && op.rejectionReason && (
+                    {isRejected && visit.rejectionReason && (
                       <div className="mt-2 pt-2 border-t border-red-200">
-                        <p className="text-xs font-semibold text-red-700">Rejection reason:</p>
-                        <p className="text-xs text-red-600 mt-0.5">{op.rejectionReason}</p>
+                        <p className="text-xs font-semibold text-red-700">Motivo de rechazo:</p>
+                        <p className="text-xs text-red-600 mt-0.5">{visit.rejectionReason}</p>
                       </div>
                     )}
 
@@ -195,8 +189,8 @@ export function OperatorPage() {
                       <div className="mt-3 space-y-1">
                         <p className="text-xs text-gray-500">
                           {uploadProgress
-                            ? `Uploading photo ${uploadProgress.uploaded} of ${uploadProgress.total}…`
-                            : "Preparing upload…"}
+                            ? `Subiendo foto ${uploadProgress.uploaded} de ${uploadProgress.total}…`
+                            : "Preparando subida…"}
                         </p>
                         <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                           <div
@@ -218,7 +212,7 @@ export function OperatorPage() {
         </div>
       </div>
 
-      <OperationFAB disabled={isSyncing} />
+      <VisitFAB disabled={isSyncing} />
     </AppShell>
   )
 }

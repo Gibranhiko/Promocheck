@@ -1,18 +1,19 @@
+// Sync engine — lógica sin cambios, solo tipos Visit
 import {
-  getPendingOperations,
-  markOperationSynced,
-  markOperationError,
-  getPhotosForOperation,
-  saveOperationLocally,
+  getPendingVisits,
+  markVisitSynced,
+  markVisitError,
+  getPhotosForVisit,
+  saveVisitLocally,
 } from "./db"
 import {
-  syncOperationToFirestore,
-  uploadPhotoToStorage,
-  updateOperationPhotos,
-} from "@/features/operations/services/operationService"
+  syncVisitToFirestore,
+  uploadVisitPhoto,
+  updateVisitPhotos,
+} from "@/features/visits/services/visitService"
 import { auth } from "@/services/firebase"
-import type { Operation, PhotoRecord } from "@/types/Operation"
-import type { PhotoType } from "@/types/PhotoType"
+import type { Visit } from "@/types/Visit"
+import type { PhotoCategory, PhotoRecord } from "@/types/PhotoCategory"
 
 const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 2000
@@ -21,7 +22,7 @@ export type SyncStatus = "idle" | "syncing" | "error" | "success"
 
 export interface SyncResult {
   success: boolean
-  operationId: string
+  visitId: string
   error?: string
   retries: number
   syncedAt?: number
@@ -31,8 +32,8 @@ async function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-async function syncOperationWithRetry(
-  op: Operation,
+async function syncVisitWithRetry(
+  visit: Visit,
   onPhotoUploaded?: () => void
 ): Promise<SyncResult> {
   let retries = 0
@@ -40,41 +41,45 @@ async function syncOperationWithRetry(
 
   while (retries < MAX_RETRIES) {
     try {
-      // 1. Save operation to Firestore first (empty photos) using local ID as doc ID.
+      // 1. Save visit to Firestore first (empty photos) using local ID as doc ID.
       //    setDoc is idempotent so retries are safe.
-      await syncOperationToFirestore(op)
+      await syncVisitToFirestore(visit)
 
       // 2. Upload photos now that the Firestore doc exists (storage rules read it).
-      const photos = await getPhotosForOperation(op.id)
-      const photoUrls: Partial<Record<PhotoType, PhotoRecord>> = {}
+      const photos = await getPhotosForVisit(visit.id)
+      const photoUrls: Partial<Record<PhotoCategory, PhotoRecord[]>> = {}
       for (const photo of photos) {
-        const record = await uploadPhotoToStorage(op.id, photo.photoType, photo.blob)
-        photoUrls[photo.photoType] = record
+        const record = await uploadVisitPhoto(visit.id, photo.category, photo.sequence, photo.blob)
+        if (!photoUrls[photo.category]) photoUrls[photo.category] = []
+        photoUrls[photo.category]![photo.sequence] = record
         onPhotoUploaded?.()
       }
 
       // 3. Update Firestore doc with the photo download URLs.
-      //    Merge with any existing photo URLs already on the operation (re-submissions
+      //    Merge with any existing photo URLs already on the visit (re-submissions
       //    keep un-re-captured photos from the previous upload).
-      const mergedPhotos = { ...(op.photos ?? {}), ...photoUrls }
-      await updateOperationPhotos(op.id, mergedPhotos)
+      const mergedPhotos: Partial<Record<PhotoCategory, PhotoRecord[]>> = { ...(visit.photos ?? {}) }
+      for (const [cat, records] of Object.entries(photoUrls) as [PhotoCategory, PhotoRecord[]][]) {
+        mergedPhotos[cat] = records
+      }
+      await updateVisitPhotos(visit.id, mergedPhotos)
 
       // 4. Update local IndexedDB record.
-      const syncedOp: Operation = {
-        ...op,
+      const syncedVisit: Visit = {
+        ...visit,
         status: "synced",
         syncedAt: Date.now(),
         photos: mergedPhotos,
         rejectionReason: undefined,
       }
-      await saveOperationLocally(syncedOp)
-      await markOperationSynced(op.id)
+      await saveVisitLocally(syncedVisit)
+      await markVisitSynced(visit.id)
 
-      return { success: true, operationId: op.id, retries, syncedAt: Date.now() }
+      return { success: true, visitId: visit.id, retries, syncedAt: Date.now() }
     } catch (err) {
       lastError = err instanceof Error ? err : null
       retries++
-      if (import.meta.env.DEV) console.error(`Sync attempt ${retries} failed for operation ${op.id}:`, err)
+      if (import.meta.env.DEV) console.error(`Sync attempt ${retries} failed for visit ${visit.id}:`, err)
       if (retries < MAX_RETRIES) {
         await delay(RETRY_DELAY_MS * retries)
       }
@@ -82,39 +87,39 @@ async function syncOperationWithRetry(
   }
 
   const errorMessage = lastError?.message ?? "Max retries exceeded"
-  await markOperationError(op.id, errorMessage)
-  return { success: false, operationId: op.id, retries, error: errorMessage }
+  await markVisitError(visit.id, errorMessage)
+  return { success: false, visitId: visit.id, retries, error: errorMessage }
 }
 
 export async function runSyncEngine(
   onProgress?: (uploaded: number, total: number) => void,
-  onOperationStart?: (operationId: string) => void
+  onVisitStart?: (visitId: string) => void
 ): Promise<SyncResult[]> {
-  const pending = await getPendingOperations()
+  const pending = await getPendingVisits()
   if (pending.length === 0) return []
 
   const currentUid = auth.currentUser?.uid
-  const ownOps = pending.filter((op) => {
-    if (op.operatorId !== currentUid) {
-      if (import.meta.env.DEV) console.warn(`Skipping operation ${op.id}: operatorId mismatch`)
+  const ownVisits = pending.filter((visit) => {
+    if (visit.promoterId !== currentUid) {
+      if (import.meta.env.DEV) console.warn(`Skipping visit ${visit.id}: promoterId mismatch`)
       return false
     }
     return true
   })
 
-  // Count total photos across all operations upfront so the progress bar has a total.
+  // Count total photos across all visits upfront so the progress bar has a total.
   let total = 0
-  for (const op of ownOps) {
-    const photos = await getPhotosForOperation(op.id)
+  for (const visit of ownVisits) {
+    const photos = await getPhotosForVisit(visit.id)
     total += photos.length
   }
   let uploaded = 0
   onProgress?.(0, total)
 
   const results: SyncResult[] = []
-  for (const op of ownOps) {
-    onOperationStart?.(op.id)
-    const result = await syncOperationWithRetry(op, () => {
+  for (const visit of ownVisits) {
+    onVisitStart?.(visit.id)
+    const result = await syncVisitWithRetry(visit, () => {
       uploaded++
       onProgress?.(uploaded, total)
     })
@@ -133,7 +138,7 @@ export async function registerBackgroundSync(): Promise<boolean> {
   if (!supportsBackgroundSync()) return false
   try {
     const registration = await navigator.serviceWorker.ready
-    await (registration as ServiceWorkerRegistration & { sync: { register: (tag: string) => Promise<void> } }).sync.register("sync-operations")
+    await (registration as ServiceWorkerRegistration & { sync: { register: (tag: string) => Promise<void> } }).sync.register("sync-visits")
     return true
   } catch (err) {
     if (import.meta.env.DEV) console.warn("Background Sync registration failed:", err)

@@ -1,8 +1,8 @@
 import { CapacitorConfig } from "@capacitor/cli"
 
 const config: CapacitorConfig = {
-  appId: "com.profresh.cargocontrol",
-  appName: "Cargo Control",
+  appId: "com.promocheck.app",
+  appName: "PromoCheck",
   webDir: "dist",
   server: {
     androidScheme: "https",
@@ -21,7 +21,7 @@ const config: CapacitorConfig = {
     // Camera permission strings injected into iOS Info.plist by `npx cap sync ios`
     Camera: {
       NSCameraUsageDescription:
-        "Camera access is required to capture photos of cargo loading and unloading operations.",
+        "Se requiere acceso a la cámara para capturar evidencia fotográfica de visitas a tiendas.",
     },
   },
 }

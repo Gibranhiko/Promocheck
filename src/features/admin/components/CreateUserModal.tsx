@@ -132,7 +132,7 @@ export function CreateUserModal({ onClose, onSuccess }: CreateUserModalProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
             <select
               value={fields.role}
               onChange={(e) =>
@@ -140,8 +140,8 @@ export function CreateUserModal({ onClose, onSuccess }: CreateUserModalProps) {
               }
               className="input"
             >
-              <option value="operator">Operator</option>
-              <option value="admin">Admin</option>
+              <option value="operator">Promotora</option>
+              <option value="admin">Administrador</option>
             </select>
           </div>
 

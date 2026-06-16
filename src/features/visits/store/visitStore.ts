@@ -1,17 +1,17 @@
 import { create } from "zustand"
-import type { Operation } from "@/types/Operation"
+import type { Visit } from "@/types/Visit"
 
-interface OperationState {
-  operations: Operation[]
+interface VisitState {
+  visits: Visit[]
   isLoading: boolean
   error: string | null
   pendingSyncCount: number
   lastSyncedAt: number | null
 
-  setOperations: (operations: Operation[]) => void
-  addOperation: (operation: Operation) => void
-  updateOperation: (id: string, updates: Partial<Operation>) => void
-  removeOperation: (id: string) => void
+  setVisits: (visits: Visit[]) => void
+  addVisit: (visit: Visit) => void
+  updateVisit: (id: string, updates: Partial<Visit>) => void
+  removeVisit: (id: string) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
   setPendingSyncCount: (count: number) => void
@@ -20,30 +20,28 @@ interface OperationState {
   decrementPendingCount: () => void
 }
 
-export const useOperationStore = create<OperationState>((set) => ({
-  operations: [],
+export const useVisitStore = create<VisitState>((set) => ({
+  visits: [],
   isLoading: false,
   error: null,
   pendingSyncCount: 0,
   lastSyncedAt: null,
 
-  setOperations: (operations) => set({ operations }),
+  setVisits: (visits) => set({ visits }),
 
-  addOperation: (operation) =>
+  addVisit: (visit) =>
     set((state) => ({
-      operations: [operation, ...state.operations],
+      visits: [visit, ...state.visits],
     })),
 
-  updateOperation: (id, updates) =>
+  updateVisit: (id, updates) =>
     set((state) => ({
-      operations: state.operations.map((op) =>
-        op.id === id ? { ...op, ...updates } : op
-      ),
+      visits: state.visits.map((v) => (v.id === id ? { ...v, ...updates } : v)),
     })),
 
-  removeOperation: (id) =>
+  removeVisit: (id) =>
     set((state) => ({
-      operations: state.operations.filter((op) => op.id !== id),
+      visits: state.visits.filter((v) => v.id !== id),
     })),
 
   setLoading: (isLoading) => set({ isLoading }),

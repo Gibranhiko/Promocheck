@@ -2,15 +2,13 @@ import { useEffect } from "react"
 import { FiCamera, FiRotateCcw, FiCheck, FiAlertCircle } from "react-icons/fi"
 import { App } from "@capacitor/app"
 import { useCamera } from "../hooks/useCamera"
-import type { PhotoType } from "@/types/PhotoType"
 
 interface CameraCaptureProps {
-  photoType: PhotoType
-  onCapture: (blob: Blob, type: PhotoType) => void
+  onCapture: (blob: Blob) => void
   onCancel?: () => void
 }
 
-export function CameraCapture({ photoType, onCapture, onCancel }: CameraCaptureProps) {
+export function CameraCapture({ onCapture, onCancel }: CameraCaptureProps) {
   const {
     videoRef: externalVideoRef,
     startCamera,
@@ -52,7 +50,7 @@ export function CameraCapture({ photoType, onCapture, onCancel }: CameraCaptureP
 
   const handleConfirm = () => {
     if (capturedBlob) {
-      onCapture(capturedBlob, photoType)
+      onCapture(capturedBlob)
     }
   }
 
