@@ -7,44 +7,10 @@ service cloud.firestore {
     // ===============================================================
     //
     // Collection: visits
-    // Document ID: local id set by client (idempotent sync)
-    // Fields:
-    //   - id: string (required)
-    //   - localId: string (required)
-    //   - visitType: string (required) - "routine" | "audit" | "special_event"
-    //   - visitDate: int (required) - unix ms del día de visita
-    //   - promoterId: string (required, immutable) - must match auth uid on create
-    //   - promoterName: string (required, 1-100 chars)
-    //   - storeId: string (required, immutable)
-    //   - storeName: string (required, 1-100 chars)
-    //   - photos: map (required, can be empty)
-    //   - status: string (required) - "pending_sync"|"synced"|"approved"|"rejected"|"error"
-    //   - notes: string (optional, max 500 chars)
-    //   - overallCondition: string (optional) - "good" | "regular" | "bad"
-    //   - rejectionReason: string (optional)
-    //   - createdAt: int (required, immutable) - unix ms timestamp
-    //   - syncedAt: int (optional)
-    //   - errorMessage: string (optional)
-    //
     // Collection: stores
-    // Document ID: auto-generated
-    // Fields:
-    //   - name: string (required, 1-100 chars)
-    //   - storeType: string (required) - "supermarket"|"convenience"|"pharmacy"|"other"
-    //   - visitFrequency: string (required) - "weekly"|"biweekly"|"monthly"
-    //   - address: string (optional)
-    //   - chain: string (optional)
-    //   - contactName: string (optional)
-    //   - contactPhone: string (optional)
-    //   - active: bool (required)
-    //   - createdAt: int (required, immutable)
-    //   - createdBy: string (required, immutable)
-    //
-    // Collection: users / audit_log — sin cambios
-    //
-    // Collection: config
-    //   - /config/photo_requirements: { required: list<string> }
-    //
+    // Collection: users
+    // Collection: config  — /config/photo_requirements: { required: list<string> }
+    // Collection: audit_log
     // ===============================================================
 
     // ===============================================================
@@ -133,8 +99,10 @@ service cloud.firestore {
     // Collection Rules
     // ===============================================================
 
+    // Visits: promotoras ven solo sus propias visitas; admin ve todas
     match /visits/{visitId} {
-      allow read: if isAdmin() || isOperator();
+      allow read: if isAdmin() ||
+        (isOperator() && resource.data.promoterId == request.auth.uid);
 
       allow create: if isOperator() && isValidVisit();
 
@@ -146,6 +114,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Stores: todos los autenticados pueden leer (necesario para el form de visita)
     match /stores/{storeId} {
       allow read: if isAuthenticated();
       allow create: if isAdmin() && isValidStore();
@@ -153,12 +122,15 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Audit log: solo admin
     match /audit_log/{entryId} {
       allow read: if isAdmin();
       allow create: if isAdmin();
       allow update, delete: if false;
     }
 
+    // Users: cada quien lee su propio doc; admin lee todos
+    // isAdmin() aquí lee users/{auth.uid} (el doc del llamante), no users/{userId} — no hay circular dependency
     match /users/{userId} {
       allow read: if isOwnDoc(userId) || isAdmin();
       allow create: if isAdmin();
@@ -168,6 +140,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Config: lectura para todos los autenticados, escritura solo admin
     match /config/{docId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();

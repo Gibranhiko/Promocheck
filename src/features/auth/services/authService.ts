@@ -36,7 +36,8 @@ export async function getUserProfile(uid: string): Promise<{ role: UserRole | nu
     if (!snap.exists()) return { role: null, name: null }
     const data = snap.data()
     return { role: data.role as UserRole ?? null, name: data.name as string ?? null }
-  } catch {
+  } catch (err) {
+    console.error("[getUserProfile] error:", err)
     return { role: null, name: null }
   }
 }
