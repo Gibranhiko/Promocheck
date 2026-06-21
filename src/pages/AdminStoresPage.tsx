@@ -340,7 +340,7 @@ export function AdminStoresPage() {
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <Link
                         to={`/admin/stores/${store.id}/products`}
-                        className="p-2 rounded-lg hover:bg-surface-tertiary text-gray-500"
+                        className="p-2 rounded-lg hover:bg-surface-tertiary text-gray-500 touch-target"
                         aria-label="Configurar productos"
                         title="Configurar productos"
                       >
@@ -348,14 +348,14 @@ export function AdminStoresPage() {
                       </Link>
                       <button
                         onClick={() => startEdit(store)}
-                        className="p-2 rounded-lg hover:bg-surface-tertiary text-gray-500"
+                        className="p-2 rounded-lg hover:bg-surface-tertiary text-gray-500 touch-target"
                         aria-label="Editar tienda"
                       >
                         <FiEdit2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleToggle(store)}
-                        className="p-2 rounded-lg hover:bg-surface-tertiary text-gray-500"
+                        className="p-2 rounded-lg hover:bg-surface-tertiary text-gray-500 touch-target"
                         aria-label={store.active ? "Desactivar" : "Activar"}
                       >
                         {store.active
@@ -365,7 +365,7 @@ export function AdminStoresPage() {
                       </button>
                       <button
                         onClick={() => handleDeleteRequest(store.id)}
-                        className="p-2 rounded-lg hover:bg-red-50 text-red-400"
+                        className="p-2 rounded-lg hover:bg-red-50 text-red-400 touch-target"
                         aria-label="Eliminar tienda"
                       >
                         <FiTrash2 className="w-4 h-4" />

@@ -93,7 +93,7 @@ export function AdminUsersPage() {
           <div className="flex items-center gap-1 flex-shrink-0">
             <button
               onClick={() => setEditingUser(user)}
-              className="p-2 rounded-lg hover:bg-surface-tertiary text-gray-500"
+              className="p-2 rounded-lg hover:bg-surface-tertiary text-gray-500 touch-target"
               aria-label="Editar usuario"
             >
               <FiEdit2 className="w-4 h-4" />
@@ -101,7 +101,7 @@ export function AdminUsersPage() {
             {!isSelf && (
               <button
                 onClick={() => setConfirmDeleteUid(user.uid)}
-                className="p-2 rounded-lg hover:bg-red-50 text-red-400"
+                className="p-2 rounded-lg hover:bg-red-50 text-red-400 touch-target"
                 aria-label="Desactivar usuario"
               >
                 <FiTrash2 className="w-4 h-4" />

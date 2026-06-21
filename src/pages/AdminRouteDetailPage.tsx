@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { FiArrowLeft, FiPlus, FiTrash2, FiCalendar, FiUser } from "react-icons/fi"
+import { FiArrowLeft, FiPlus, FiTrash2, FiCalendar, FiUser, FiChevronUp, FiChevronDown } from "react-icons/fi"
 import { AppShell } from "@/shared/components/layout/AppShell"
 import { SkeletonList } from "@/shared/components/ui/Skeleton"
 import { EmptyState } from "@/shared/components/ui/EmptyState"
@@ -48,8 +48,7 @@ export function AdminRouteDetailPage() {
   const [isReassigning, setIsReassigning] = useState(false)
   const [conflictWarning, setConflictWarning] = useState(false)
 
-  // Drag-and-drop
-  const dragIndex = useRef<number | null>(null)
+  // Reorder
 
   const load = useCallback(async () => {
     if (!routeId) return
@@ -103,16 +102,11 @@ export function AdminRouteDetailPage() {
     }
   }
 
-  // HTML5 drag-and-drop reorder
-  const handleDragStart = (_e: React.DragEvent, index: number) => { dragIndex.current = index }
-  const handleDrop = async (_e: React.DragEvent, dropIndex: number) => {
-    const from = dragIndex.current
-    if (from === null || from === dropIndex) return
-    dragIndex.current = null
-
+  const handleMove = async (index: number, direction: "up" | "down") => {
+    const swapIndex = direction === "up" ? index - 1 : index + 1
+    if (swapIndex < 0 || swapIndex >= routeStores.length) return
     const reordered = [...routeStores]
-    const [moved] = reordered.splice(from, 1)
-    reordered.splice(dropIndex, 0, moved)
+    ;[reordered[index], reordered[swapIndex]] = [reordered[swapIndex], reordered[index]]
     const updated = reordered.map((rs, i) => ({ ...rs, order: i }))
     setRouteStores(updated)
     await Promise.all(updated.map((rs) => reorderRouteStore(rs.id, rs.order)))
@@ -206,30 +200,43 @@ export function AdminRouteDetailPage() {
               <EmptyState icon="🏪" title="Sin tiendas" description="Agrega tiendas a esta ruta para generar planes de visita." />
             ) : (
               <div className="space-y-2">
-                <p className="text-xs text-gray-400 px-1">Arrastra para reordenar</p>
                 {routeStores.map((rs, index) => {
                   const store = storeMap.get(rs.storeId)
                   return (
                     <div
                       key={rs.id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, index)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => handleDrop(e, index)}
-                      className="card flex items-center gap-3 cursor-grab active:cursor-grabbing select-none"
+                      className="card flex items-center gap-3"
                     >
-                      <span className="text-gray-300 text-sm font-medium w-5 text-center">{rs.order + 1}</span>
+                      <span className="text-gray-300 text-sm font-medium w-5 text-center flex-shrink-0">{rs.order + 1}</span>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900 truncate">{store?.name ?? rs.storeId}</p>
                         <p className="text-xs text-gray-500">{VISIT_FREQUENCY_LABELS[rs.visitFrequency]}</p>
                       </div>
-                      <button
-                        onClick={() => handleRemoveStore(rs)}
-                        className="p-2 rounded-lg hover:bg-red-50 text-red-400"
-                        aria-label="Eliminar tienda"
-                      >
-                        <FiTrash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => handleMove(index, "up")}
+                          disabled={index === 0}
+                          className="p-2 rounded-lg hover:bg-surface-tertiary text-gray-400 disabled:opacity-20 touch-target"
+                          aria-label="Subir"
+                        >
+                          <FiChevronUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleMove(index, "down")}
+                          disabled={index === routeStores.length - 1}
+                          className="p-2 rounded-lg hover:bg-surface-tertiary text-gray-400 disabled:opacity-20 touch-target"
+                          aria-label="Bajar"
+                        >
+                          <FiChevronDown className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleRemoveStore(rs)}
+                          className="p-2 rounded-lg hover:bg-red-50 text-red-400 touch-target"
+                          aria-label="Eliminar tienda"
+                        >
+                          <FiTrash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   )
                 })}

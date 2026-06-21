@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { useNavigate } from "react-router-dom"
-import { FiSearch, FiRefreshCw, FiWifi, FiWifiOff, FiX } from "react-icons/fi"
+import { FiSearch, FiRefreshCw, FiWifi, FiWifiOff, FiX, FiSliders } from "react-icons/fi"
 import { AppShell } from "@/shared/components/layout/AppShell"
 import { StatusBadge } from "@/shared/components/ui/StatusBadge"
-import { SkeletonTableRow } from "@/shared/components/ui/Skeleton"
+import { SkeletonList } from "@/shared/components/ui/Skeleton"
 import { EmptyState } from "@/shared/components/ui/EmptyState"
 import { useOnlineStatus } from "@/shared/hooks"
 import { useToast } from "@/shared/store/toastStore"
@@ -43,6 +43,7 @@ export function AdminPage() {
   const [dateTo, setDateTo] = useState("")
 
   const [stores, setStores] = useState<Store[]>([])
+  const [showFilters, setShowFilters] = useState(false)
 
   const serverFilters: VisitFilters = {
     storeId: storeFilter || undefined,
@@ -56,7 +57,7 @@ export function AdminPage() {
     fetchActiveStores().then(setStores).catch(() => {})
   }, [])
 
-  const hasServerFilters = !!(storeFilter || typeFilter || dateFrom || dateTo)
+
 
   const fetchPage = useCallback(async (filters: VisitFilters, cursor?: DocumentSnapshot) => {
     const hasActive = !!(filters.storeId || filters.visitType || filters.dateFrom || filters.dateTo)
@@ -130,7 +131,14 @@ export function AdminPage() {
   const hasAnyFilter = searchQuery || statusFilter !== "all" || promoterFilter ||
     storeFilter || typeFilter || dateFrom || dateTo
 
-  const storeName = stores.find((s) => s.id === storeFilter)?.name
+  const activeFilterCount = [
+    statusFilter !== "all",
+    !!promoterFilter,
+    !!storeFilter,
+    !!typeFilter,
+    !!dateFrom,
+    !!dateTo,
+  ].filter(Boolean).length
 
   return (
     <AppShell title="Dashboard" navItems={ADMIN_NAV}>
@@ -160,8 +168,8 @@ export function AdminPage() {
 
           {/* Filters */}
           <div className="space-y-3 mb-4">
-            <div className="flex gap-2 flex-wrap">
-              <div className="relative flex-1 min-w-[160px]">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
                 <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
@@ -171,112 +179,95 @@ export function AdminPage() {
                   className="input pl-9 text-sm"
                 />
               </div>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="input w-auto text-sm"
+              <button
+                onClick={() => setShowFilters((v) => !v)}
+                className={`btn text-sm flex items-center gap-1.5 flex-shrink-0 ${
+                  activeFilterCount > 0
+                    ? "bg-primary-50 text-primary border border-primary-200"
+                    : "btn-secondary"
+                }`}
               >
-                <option value="all">Todos los estados</option>
-                <option value="pending_sync">Pendiente</option>
-                <option value="synced">Sincronizada</option>
-                <option value="approved">Aprobada</option>
-                <option value="rejected">Rechazada</option>
-                <option value="error">Error</option>
-              </select>
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="input w-auto text-sm"
-              >
-                <option value="">Todos los tipos</option>
-                <option value="routine">Rutina</option>
-                <option value="audit">Auditoría</option>
-                <option value="special_event">Evento especial</option>
-              </select>
+                <FiSliders className="w-4 h-4" />
+                Filtros
+                {activeFilterCount > 0 && (
+                  <span className="bg-primary text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
             </div>
 
-            <div className="flex gap-2 flex-wrap">
-              <select
-                value={storeFilter}
-                onChange={(e) => setStoreFilter(e.target.value)}
-                className="input w-auto text-sm flex-1 min-w-[140px]"
-              >
-                <option value="">Todas las tiendas</option>
-                {stores.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-              <input
-                type="text"
-                placeholder="Nombre de promotora…"
-                value={promoterFilter}
-                onChange={(e) => setPromoterFilter(e.target.value)}
-                className="input text-sm flex-1 min-w-[140px]"
-              />
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="input w-auto text-sm"
-                aria-label="Desde"
-              />
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="input w-auto text-sm"
-                aria-label="Hasta"
-              />
-              {hasAnyFilter && (
-                <button onClick={clearAllFilters} className="btn btn-secondary text-sm">
-                  <FiX className="w-4 h-4" /> Limpiar
-                </button>
-              )}
-            </div>
-
-            {hasServerFilters && (
-              <div className="flex gap-2 flex-wrap text-xs">
-                {storeName && (
-                  <span className="bg-primary-100 text-primary px-2 py-1 rounded-full">
-                    Tienda: {storeName}
-                  </span>
+            {showFilters && (
+              <div className="space-y-2 p-3 bg-surface-secondary rounded-xl border border-gray-100">
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="input text-sm"
+                  >
+                    <option value="all">Todos los estados</option>
+                    <option value="pending_sync">Pendiente</option>
+                    <option value="synced">Sincronizada</option>
+                    <option value="approved">Aprobada</option>
+                    <option value="rejected">Rechazada</option>
+                    <option value="error">Error</option>
+                  </select>
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="input text-sm"
+                  >
+                    <option value="">Todos los tipos</option>
+                    <option value="routine">Rutina</option>
+                    <option value="audit">Auditoría</option>
+                    <option value="special_event">Evento especial</option>
+                  </select>
+                </div>
+                <select
+                  value={storeFilter}
+                  onChange={(e) => setStoreFilter(e.target.value)}
+                  className="input text-sm w-full"
+                >
+                  <option value="">Todas las tiendas</option>
+                  {stores.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  placeholder="Nombre de promotora…"
+                  value={promoterFilter}
+                  onChange={(e) => setPromoterFilter(e.target.value)}
+                  className="input text-sm w-full"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="input text-sm"
+                    aria-label="Desde"
+                  />
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="input text-sm"
+                    aria-label="Hasta"
+                  />
+                </div>
+                {hasAnyFilter && (
+                  <button onClick={clearAllFilters} className="btn btn-secondary text-sm w-full">
+                    <FiX className="w-4 h-4" /> Limpiar filtros
+                  </button>
                 )}
-                {typeFilter && (
-                  <span className="bg-primary-100 text-primary px-2 py-1 rounded-full capitalize">
-                    Tipo: {VISIT_TYPE_LABELS[typeFilter as keyof typeof VISIT_TYPE_LABELS] ?? typeFilter}
-                  </span>
-                )}
-                {(dateFrom || dateTo) && (
-                  <span className="bg-primary-100 text-primary px-2 py-1 rounded-full">
-                    {dateFrom && dateTo ? `${dateFrom} – ${dateTo}` : dateFrom ? `Desde ${dateFrom}` : `Hasta ${dateTo}`}
-                  </span>
-                )}
-                <span className="text-gray-400 italic">Filtrado desde Firestore</span>
               </div>
             )}
           </div>
 
           {/* Results */}
           {isLoading ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left text-sm text-gray-500 border-b">
-                    <th className="pb-3 font-medium">Tienda</th>
-                    <th className="pb-3 font-medium">Tipo</th>
-                    <th className="pb-3 font-medium">Promotora</th>
-                    <th className="pb-3 font-medium">Condición</th>
-                    <th className="pb-3 font-medium">Estado</th>
-                    <th className="pb-3 font-medium">Fecha</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <SkeletonTableRow key={i} cols={6} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <SkeletonList count={6} />
           ) : filteredVisits.length === 0 ? (
             <EmptyState
               icon="🔍"
@@ -289,42 +280,34 @@ export function AdminPage() {
             />
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left text-sm text-gray-500 border-b">
-                      <th className="pb-3 font-medium">Tienda</th>
-                      <th className="pb-3 font-medium">Tipo</th>
-                      <th className="pb-3 font-medium">Promotora</th>
-                      <th className="pb-3 font-medium">Condición</th>
-                      <th className="pb-3 font-medium">Estado</th>
-                      <th className="pb-3 font-medium">Fecha</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredVisits.map((v) => (
-                      <tr
-                        key={v.id}
-                        onClick={() => navigate(`/visit/${v.id}`)}
-                        className={`border-b last:border-b-0 hover:bg-gray-50 cursor-pointer ${v.status === "rejected" ? "bg-red-50" : ""}`}
-                      >
-                        <td className="py-3 font-medium">{v.storeName}</td>
-                        <td className="py-3 text-sm capitalize">
-                          {VISIT_TYPE_LABELS[v.visitType] ?? v.visitType}
-                        </td>
-                        <td className="py-3 text-sm">{v.promoterName}</td>
-                        <td className="py-3 text-sm">
-                          {v.overallCondition
-                            ? VISIT_CONDITION_LABELS[v.overallCondition]
-                            : "—"
-                          }
-                        </td>
-                        <td className="py-3"><StatusBadge status={v.status} /></td>
-                        <td className="py-3 text-sm text-gray-500">{formatDateTime(v.createdAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="space-y-2">
+                {filteredVisits.map((v) => (
+                  <div
+                    key={v.id}
+                    onClick={() => navigate(`/visit/${v.id}`)}
+                    className={`card cursor-pointer active:bg-gray-50 ${
+                      v.status === "rejected" ? "border-l-4 border-l-red-400" : ""
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-medium text-gray-900 truncate">{v.storeName}</p>
+                      <StatusBadge status={v.status} />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-xs text-gray-500">
+                      <span>{v.promoterName}</span>
+                      <span>·</span>
+                      <span>{VISIT_TYPE_LABELS[v.visitType] ?? v.visitType}</span>
+                      {v.overallCondition && (
+                        <>
+                          <span>·</span>
+                          <span>{VISIT_CONDITION_LABELS[v.overallCondition]}</span>
+                        </>
+                      )}
+                      <span>·</span>
+                      <span>{formatDateTime(v.createdAt)}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
 
               <div className="mt-3 flex items-center justify-between">

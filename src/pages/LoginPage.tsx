@@ -74,9 +74,11 @@ export function LoginPage() {
 
       <div className="relative z-10 w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-600 mb-4">
-            <span className="text-3xl font-bold text-white">P</span>
-          </div>
+          <img
+            src="https://firebasestorage.googleapis.com/v0/b/promocheck-dev.firebasestorage.app/o/public%2Fpromocheck-logo.png?alt=media&token=76ba1cf4-2a02-455a-a0a3-5d33954afa7e"
+            alt="PromoCheck"
+            className="h-16 w-auto object-contain mx-auto mb-4"
+          />
           <h1 className="text-2xl font-bold text-white">PromoCheck</h1>
           <p className="text-slate-400 mt-1">Inicia sesión para continuar</p>
         </div>
@@ -106,7 +108,7 @@ export function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="operator@company.com"
+                placeholder="correo@empresa.com"
                 disabled={isLoading}
                 autoComplete="email"
                 className="pl-10 w-full rounded-xl px-4 py-3 text-base
@@ -134,7 +136,7 @@ export function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
+                placeholder="Contraseña"
                 disabled={isLoading}
                 autoComplete="current-password"
                 className="pl-10 w-full rounded-xl px-4 py-3 text-base
@@ -160,10 +162,10 @@ export function LoginPage() {
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Signing in...
+                Entrando…
               </span>
             ) : (
-              "Sign In"
+              "Iniciar sesión"
             )}
           </button>
         </form>

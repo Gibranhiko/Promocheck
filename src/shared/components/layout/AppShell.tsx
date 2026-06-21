@@ -56,10 +56,14 @@ export function AppShell({ children, title, showBack, headerRight, navItems }: A
                 <FiChevronLeft className="w-5 h-5 text-gray-700" />
               </button>
             ) : (
-              <span className="text-xl mr-1">📦</span>
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/promocheck-dev.firebasestorage.app/o/public%2Fpromocheck-logo.png?alt=media&token=76ba1cf4-2a02-455a-a0a3-5d33954afa7e"
+                alt="PromoCheck"
+                className="h-7 w-auto object-contain"
+              />
             )}
             <h1 className="text-base font-bold text-gray-900 truncate">
-              {title || "Cargo Control"}
+              {title || "PromoCheck"}
             </h1>
           </div>
           {headerRight && (

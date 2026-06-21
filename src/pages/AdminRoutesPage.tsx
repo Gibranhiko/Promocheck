@@ -129,15 +129,15 @@ export function AdminRoutesPage() {
               <div className="flex items-center gap-1 flex-shrink-0">
                 <Link
                   to={`/admin/routes/${route.id}`}
-                  className="p-2 rounded-lg hover:bg-surface-tertiary text-gray-500"
+                  className="p-2 rounded-lg hover:bg-surface-tertiary text-gray-500 touch-target"
                   title="Ver tiendas"
                 >
                   <FiMapPin className="w-4 h-4" />
                 </Link>
-                <button onClick={() => openEdit(route)} className="p-2 rounded-lg hover:bg-surface-tertiary text-gray-500" aria-label="Editar">
+                <button onClick={() => openEdit(route)} className="p-2 rounded-lg hover:bg-surface-tertiary text-gray-500 touch-target" aria-label="Editar">
                   <FiEdit2 className="w-4 h-4" />
                 </button>
-                <button onClick={() => handleToggle(route)} className="p-2 rounded-lg hover:bg-surface-tertiary text-gray-500" aria-label={route.active ? "Desactivar" : "Activar"}>
+                <button onClick={() => handleToggle(route)} className="p-2 rounded-lg hover:bg-surface-tertiary text-gray-500 touch-target" aria-label={route.active ? "Desactivar" : "Activar"}>
                   {route.active ? <FiToggleRight className="w-6 h-6 text-success" /> : <FiToggleLeft className="w-6 h-6" />}
                 </button>
               </div>
