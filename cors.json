@@ -5,8 +5,8 @@
       "http://localhost:4173",
       "https://localhost",
       "capacitor://localhost",
-      "https://profresh-cargo-control.web.app",
-      "https://profresh-cargo-control.firebaseapp.com"
+      "https://promocheck-dev.web.app",
+      "https://promocheck-dev.firebaseapp.com"
     ],
     "method": ["GET"],
     "maxAgeSeconds": 3600,

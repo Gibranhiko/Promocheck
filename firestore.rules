@@ -8,8 +8,14 @@ service cloud.firestore {
     //
     // Collection: visits
     // Collection: stores
+    // Collection: products
+    // Collection: store_products
+    // Collection: stock_snapshots
+    // Collection: routes
+    // Collection: route_stores
+    // Collection: visit_plans
     // Collection: users
-    // Collection: config  — /config/photo_requirements: { required: list<string> }
+    // Collection: config  — /config/photo_requirements, /config/alert_settings
     // Collection: audit_log
     // ===============================================================
 
@@ -83,6 +89,31 @@ service cloud.firestore {
         && data.createdBy is string;
     }
 
+    function isValidSnapshot() {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          'visitId', 'storeId', 'productId',
+          'shelfQty', 'backroomQty', 'totalQty',
+          'needsReorder', 'capturedAt', 'capturedById', 'status'
+        ])
+        && data.capturedById == request.auth.uid
+        && data.shelfQty is int && data.shelfQty >= 0
+        && data.backroomQty is int && data.backroomQty >= 0
+        && data.totalQty is int && data.totalQty >= 0
+        && data.needsReorder is bool
+        && data.status in ['pending_sync', 'synced'];
+    }
+
+    function isValidVisitPlanUpdate() {
+      let data = request.resource.data;
+      return data.promoterId == resource.data.promoterId
+        && data.routeId == resource.data.routeId
+        && data.storeId == resource.data.storeId
+        && data.plannedDate == resource.data.plannedDate
+        && data.createdAt == resource.data.createdAt
+        && data.status in ['pending', 'completed', 'missed'];
+    }
+
     function isValidStoreUpdate() {
       let data = request.resource.data;
       return data.createdAt == resource.data.createdAt
@@ -144,6 +175,67 @@ service cloud.firestore {
     match /config/{docId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
+    }
+
+    // Products: catálogo de productos — lectura para todos (promotoras necesitan la lista al contar)
+    match /products/{productId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Store Products: asignaciones tienda-producto y umbrales
+    match /store_products/{spId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Stock Snapshots: escritura por la promotora que captura (capturedById == uid)
+    match /stock_snapshots/{snapId} {
+      allow read: if isAdmin() ||
+        (isOperator() && resource.data.capturedById == request.auth.uid);
+
+      // setDoc desde el sync engine — la promotora crea/sobreescribe su propio snapshot
+      allow create: if isOperator() && isValidSnapshot();
+      allow update: if isAdmin() ||
+        (isOperator() && resource.data.capturedById == request.auth.uid);
+      allow delete: if false;
+    }
+
+    // Routes: admin gestiona; promotora ve solo sus rutas
+    match /routes/{routeId} {
+      allow read: if isAdmin() ||
+        (isOperator() && resource.data.promoterId == request.auth.uid);
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Route Stores: configuración de tiendas por ruta — lectura autenticada
+    match /route_stores/{rsId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Visit Plans: admin genera; promotora ve y actualiza solo los suyos
+    match /visit_plans/{planId} {
+      allow read: if isAdmin() ||
+        (isOperator() && resource.data.promoterId == request.auth.uid);
+
+      allow create: if isAdmin();
+
+      // Promotora puede marcar completed/missed en sus propios planes
+      allow update: if isAdmin() ||
+        (isOperator()
+          && resource.data.promoterId == request.auth.uid
+          && isValidVisitPlanUpdate());
+
+      allow delete: if false;
     }
   }
 }

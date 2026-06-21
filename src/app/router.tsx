@@ -12,6 +12,13 @@ import { AccountPage } from "@/pages/AccountPage"
 import { PromoterHistoryPage } from "@/pages/PromoterHistoryPage"
 import { AdminUsersPage } from "@/pages/AdminUsersPage"
 import { AdminStoresPage } from "@/pages/AdminStoresPage"
+import { AdminProductsPage } from "@/pages/AdminProductsPage"
+import { AdminStoreProductsPage } from "@/pages/AdminStoreProductsPage"
+import { AdminStockOverviewPage } from "@/pages/AdminStockOverviewPage"
+import { AdminReportsPage } from "@/pages/AdminReportsPage"
+import { AdminRoutesPage } from "@/pages/AdminRoutesPage"
+import { AdminRouteDetailPage } from "@/pages/AdminRouteDetailPage"
+import { PromoterRoutePage } from "@/pages/PromoterRoutePage"
 
 function AuthProvider() {
   useAuth()
@@ -89,6 +96,10 @@ const router = createBrowserRouter([
             path: "/promoter/history",
             element: <PromoterHistoryPage />,
           },
+          {
+            path: "/promoter/route",
+            element: <PromoterRoutePage />,
+          },
         ],
       },
 
@@ -107,6 +118,30 @@ const router = createBrowserRouter([
           {
             path: "/admin/stores",
             element: <AdminStoresPage />,
+          },
+          {
+            path: "/admin/products",
+            element: <AdminProductsPage />,
+          },
+          {
+            path: "/admin/stores/:storeId/products",
+            element: <AdminStoreProductsPage />,
+          },
+          {
+            path: "/admin/stock",
+            element: <AdminStockOverviewPage />,
+          },
+          {
+            path: "/admin/reports",
+            element: <AdminReportsPage />,
+          },
+          {
+            path: "/admin/routes",
+            element: <AdminRoutesPage />,
+          },
+          {
+            path: "/admin/routes/:routeId",
+            element: <AdminRouteDetailPage />,
           },
         ],
       },

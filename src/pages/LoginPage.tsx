@@ -74,17 +74,11 @@ export function LoginPage() {
 
       <div className="relative z-10 w-full max-w-sm">
         <div className="text-center mb-8">
-          <div
-            className="inline-flex items-center justify-center mb-4"
-          >
-            <img
-              src="https://profreshcold.com/wp-content/uploads/2025/05/profresh-logo-2048x465.png"
-              alt="Profresh logo"
-              className="h-14 w-auto"
-            />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-600 mb-4">
+            <span className="text-3xl font-bold text-white">P</span>
           </div>
-          <h1 className="text-2xl font-bold text-white">Cargo Control 1.1</h1>
-          <p className="text-slate-400 mt-1">Sign in to continue</p>
+          <h1 className="text-2xl font-bold text-white">PromoCheck</h1>
+          <p className="text-slate-400 mt-1">Inicia sesión para continuar</p>
         </div>
 
         {error && (

@@ -19,7 +19,7 @@ import { auth, db } from "@/services/firebase"
 import type { UserRole } from "@/types/UserRole"
 
 // ── Secondary app — isolated from the admin's active session ────────────────
-const SECONDARY_APP_NAME = "cargo-control-secondary"
+const SECONDARY_APP_NAME = "promocheck-secondary"
 const secondaryApp =
   getApps().find((a) => a.name === SECONDARY_APP_NAME) ??
   initializeApp(firebaseConfig, SECONDARY_APP_NAME)

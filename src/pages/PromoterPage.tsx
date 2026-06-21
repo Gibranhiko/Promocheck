@@ -10,6 +10,7 @@ import { formatRelativeTime } from "@/shared/utils"
 import { useOnlineStatus } from "@/shared/hooks"
 import { useToast } from "@/shared/store/toastStore"
 import { useAuth } from "@/features/auth/hooks"
+import { useRouteAlerts } from "@/features/routes/hooks/useRouteAlerts"
 import { getLocalVisits } from "@/services/offline/db"
 import { fetchVisitsByPromoter } from "@/features/visits/services/visitService"
 import { PROMOTER_NAV } from "@/shared/constants/navItems"
@@ -21,6 +22,7 @@ const EDITABLE_STATUSES = new Set(["pending_sync", "synced", "rejected"])
 export function PromoterPage() {
   const { isOnline, pendingCount, isSyncing, uploadProgress, syncingVisitId, sync } = useOnlineStatus()
   const { user } = useAuth()
+  const { missedCount } = useRouteAlerts(user?.uid)
   const navigate = useNavigate()
   const [recentVisits, setRecentVisits] = useState<Visit[]>([])
   const [isLoadingVisits, setIsLoadingVisits] = useState(true)
@@ -80,6 +82,19 @@ export function PromoterPage() {
   return (
     <AppShell title="Inicio" navItems={PROMOTER_NAV}>
       <div className="space-y-6">
+        {/* Missed route plans banner */}
+        {missedCount > 0 && (
+          <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 flex items-start gap-3">
+            <FiAlertCircle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-orange-700">
+                {missedCount === 1 ? "1 visita vencida en tu ruta" : `${missedCount} visitas vencidas en tu ruta`}
+              </p>
+              <p className="text-xs text-orange-600 mt-0.5">Revisa tu ruta para ponerte al día.</p>
+            </div>
+          </div>
+        )}
+
         {/* Rejected visits alert */}
         {rejectedVisits.length > 0 && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">

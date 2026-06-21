@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { useNavigate, useParams, useBlocker } from "react-router-dom"
+import { useNavigate, useParams, useBlocker, useSearchParams } from "react-router-dom"
 import { doc, getDoc } from "firebase/firestore"
 import { AppShell } from "@/shared/components/layout/AppShell"
 import { CategoryPhotoCapture } from "@/features/camera/components/CategoryPhotoCapture"
@@ -9,6 +9,10 @@ import { useToast } from "@/shared/store/toastStore"
 import { visitSchema } from "@/features/visits/schemas/visitSchema"
 import { fetchActiveStores } from "@/features/admin/services/storeService"
 import { getVisit, saveVisitLocally, savePhotoLocally, getPhotosForVisit } from "@/services/offline/db"
+import { StockCountingForm } from "@/features/stock/components/StockCountingForm"
+import { saveStockCounts } from "@/features/stock/hooks/useStock"
+import type { StockCountEntry } from "@/features/stock/hooks/useStock"
+import { markPlanCompleted } from "@/features/routes/services/visitPlanService"
 import { fetchVisit } from "@/features/visits/services/visitService"
 import { db as firestoreDb } from "@/services/firebase/firebaseServices"
 import {
@@ -45,6 +49,9 @@ function dateInputToTimestamp(value: string): number {
 
 export function VisitFormPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const planId = searchParams.get("planId")
+  const preselectedStoreId = searchParams.get("storeId")
   const { id: editId } = useParams<{ id: string }>()
   const isEditMode = !!editId
 
@@ -72,12 +79,21 @@ export function VisitFormPage() {
   // Required categories — from Firestore config or default
   const [requiredCategories, setRequiredCategories] = useState<PhotoCategory[]>(DEFAULT_REQUIRED_CATEGORIES)
 
+  const [stockCounts, setStockCounts] = useState<StockCountEntry[]>([])
+  const [storeHasProducts, setStoreHasProducts] = useState(false)
+
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Load stores and photo config in parallel
   useEffect(() => {
     fetchActiveStores()
-      .then(setStores)
+      .then((stores) => {
+        setStores(stores)
+        if (preselectedStoreId) {
+          const store = stores.find((s) => s.id === preselectedStoreId)
+          if (store) setSelectedStore(store)
+        }
+      })
       .catch(() => toast.error("No se pudieron cargar las tiendas"))
 
     getDoc(doc(firestoreDb, "config", "photo_requirements"))
@@ -208,6 +224,7 @@ export function VisitFormPage() {
           rejectionReason: undefined,
         }
         await saveVisitLocally(updatedVisit)
+        await saveStockCounts(existingVisit.id, selectedStore!.id, stockCounts, user.uid)
 
         // Save newly captured blobs
         for (const [category, blobs] of photosMap) {
@@ -245,6 +262,8 @@ export function VisitFormPage() {
           },
           photosMap
         )
+        await saveStockCounts(visitId, selectedStore!.id, stockCounts, user.uid)
+        if (planId) await markPlanCompleted(planId, visitId).catch(() => {})
 
         toast.success(navigator.onLine ? "Visita guardada. Subiendo fotos…" : "Guardada localmente. Se sincronizará cuando haya conexión.")
         navigate("/promoter", { replace: true })
@@ -308,6 +327,8 @@ export function VisitFormPage() {
                   const s = stores.find((s) => s.id === e.target.value) ?? null
                   setSelectedStore(s)
                   setFieldErrors((prev) => ({ ...prev, storeId: undefined }))
+                  setStockCounts([])
+                  setStoreHasProducts(false)
                 }}
                 className={`input ${fieldErrors.storeId ? "input-error" : ""}`}
               >
@@ -435,6 +456,18 @@ export function VisitFormPage() {
           />
           <p className="mt-1 text-xs text-gray-400 text-right">{notes.length}/500</p>
         </div>
+
+        {/* Section 4: Stock counting (only when store has assigned products) */}
+        {selectedStore && (
+          <div className={storeHasProducts ? "card" : "hidden"}>
+            <h3 className="font-medium text-gray-900 mb-4">Conteo de stock</h3>
+            <StockCountingForm
+              storeId={selectedStore.id}
+              onCountsChange={setStockCounts}
+              onProductsLoaded={(count) => setStoreHasProducts(count > 0)}
+            />
+          </div>
+        )}
 
         {/* Submit */}
         <button

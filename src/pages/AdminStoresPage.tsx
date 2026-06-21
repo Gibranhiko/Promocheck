@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
-import { FiPlus, FiToggleLeft, FiToggleRight, FiEdit2, FiTrash2, FiCheck, FiX } from "react-icons/fi"
+import { FiPlus, FiToggleLeft, FiToggleRight, FiEdit2, FiTrash2, FiCheck, FiX, FiPackage } from "react-icons/fi"
+import { Link } from "react-router-dom"
 import { AppShell } from "@/shared/components/layout/AppShell"
 import { SkeletonList } from "@/shared/components/ui/Skeleton"
 import { EmptyState } from "@/shared/components/ui/EmptyState"
@@ -337,6 +338,14 @@ export function AdminStoresPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
+                      <Link
+                        to={`/admin/stores/${store.id}/products`}
+                        className="p-2 rounded-lg hover:bg-surface-tertiary text-gray-500"
+                        aria-label="Configurar productos"
+                        title="Configurar productos"
+                      >
+                        <FiPackage className="w-4 h-4" />
+                      </Link>
                       <button
                         onClick={() => startEdit(store)}
                         className="p-2 rounded-lg hover:bg-surface-tertiary text-gray-500"

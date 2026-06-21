@@ -1,4 +1,3 @@
-// Sync engine — lógica sin cambios, solo tipos Visit
 import {
   getPendingVisits,
   markVisitSynced,
@@ -11,6 +10,7 @@ import {
   uploadVisitPhoto,
   updateVisitPhotos,
 } from "@/features/visits/services/visitService"
+import { syncSnapshotsToFirestore } from "@/features/stock/services/stockSnapshotService"
 import { auth } from "@/services/firebase"
 import type { Visit } from "@/types/Visit"
 import type { PhotoCategory, PhotoRecord } from "@/types/PhotoCategory"
@@ -26,6 +26,7 @@ export interface SyncResult {
   error?: string
   retries: number
   syncedAt?: number
+  snapshotsSynced: number
 }
 
 async function delay(ms: number): Promise<void> {
@@ -75,7 +76,10 @@ async function syncVisitWithRetry(
       await saveVisitLocally(syncedVisit)
       await markVisitSynced(visit.id)
 
-      return { success: true, visitId: visit.id, retries, syncedAt: Date.now() }
+      // 5. Sync stock snapshots captured during this visit.
+      const snapshotsSynced = await syncSnapshotsToFirestore(visit.id)
+
+      return { success: true, visitId: visit.id, retries, syncedAt: Date.now(), snapshotsSynced }
     } catch (err) {
       lastError = err instanceof Error ? err : null
       retries++
@@ -88,7 +92,7 @@ async function syncVisitWithRetry(
 
   const errorMessage = lastError?.message ?? "Max retries exceeded"
   await markVisitError(visit.id, errorMessage)
-  return { success: false, visitId: visit.id, retries, error: errorMessage }
+  return { success: false, visitId: visit.id, retries, error: errorMessage, snapshotsSynced: 0 }
 }
 
 export async function runSyncEngine(

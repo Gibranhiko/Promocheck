@@ -22,3 +22,8 @@ export type {
   VisitFrequency,
 } from "./Store"
 export { STORE_TYPE_LABELS, VISIT_FREQUENCY_LABELS } from "./Store"
+export type { Product, ProductUnit } from "./Product"
+export { PRODUCT_UNIT_LABELS } from "./Product"
+export type { StoreProduct } from "./StoreProduct"
+export type { StockSnapshot, StockSnapshotStatus } from "./StockSnapshot"
+export type { Route, RouteStore, VisitPlan, VisitPlanStatus } from "./Route"

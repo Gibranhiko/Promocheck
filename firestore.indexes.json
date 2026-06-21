@@ -1,52 +1,120 @@
 {
   "indexes": [
     {
-      "collectionGroup": "operations",
+      "collectionGroup": "visits",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "operatorId", "order": "ASCENDING" },
+        { "fieldPath": "promoterId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt",  "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "visits",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "storeId",   "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
-      "collectionGroup": "operations",
+      "collectionGroup": "visits",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "clientId", "order": "ASCENDING" },
+        { "fieldPath": "visitType", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
-      "collectionGroup": "operations",
+      "collectionGroup": "visits",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "operationType", "order": "ASCENDING" },
+        { "fieldPath": "storeId",   "order": "ASCENDING" },
+        { "fieldPath": "visitType", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
-      "collectionGroup": "operations",
+      "collectionGroup": "stock_snapshots",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "clientId", "order": "ASCENDING" },
-        { "fieldPath": "operationType", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        { "fieldPath": "storeId",    "order": "ASCENDING" },
+        { "fieldPath": "capturedAt", "order": "DESCENDING" }
       ]
     },
     {
-      "collectionGroup": "operations",
+      "collectionGroup": "stock_snapshots",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "clientId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "ASCENDING" }
+        { "fieldPath": "storeId",    "order": "ASCENDING" },
+        { "fieldPath": "productId",  "order": "ASCENDING" },
+        { "fieldPath": "capturedAt", "order": "DESCENDING" }
       ]
     },
     {
-      "collectionGroup": "operations",
+      "collectionGroup": "store_products",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "operationType", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "ASCENDING" }
+        { "fieldPath": "storeId", "order": "ASCENDING" },
+        { "fieldPath": "active",  "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "store_products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "storeId",   "order": "ASCENDING" },
+        { "fieldPath": "productId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "routes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "promoterId", "order": "ASCENDING" },
+        { "fieldPath": "active",     "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "route_stores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "routeId", "order": "ASCENDING" },
+        { "fieldPath": "active",  "order": "ASCENDING" },
+        { "fieldPath": "order",   "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "visit_plans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "promoterId",  "order": "ASCENDING" },
+        { "fieldPath": "plannedDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "visit_plans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "promoterId",  "order": "ASCENDING" },
+        { "fieldPath": "status",      "order": "ASCENDING" },
+        { "fieldPath": "plannedDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "visit_plans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "promoterId",  "order": "ASCENDING" },
+        { "fieldPath": "status",      "order": "ASCENDING" },
+        { "fieldPath": "plannedDate", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "visit_plans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "routeId", "order": "ASCENDING" },
+        { "fieldPath": "status",  "order": "ASCENDING" }
       ]
     }
   ],

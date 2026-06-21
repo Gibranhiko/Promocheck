@@ -4,6 +4,7 @@ import {
   updateDoc,
   deleteDoc,
   getDocs,
+  getDoc,
   doc,
   query,
   orderBy,
@@ -32,6 +33,12 @@ export async function fetchActiveStores(): Promise<Store[]> {
   return snap.docs
     .map((d) => ({ id: d.id, ...(d.data() as Omit<Store, "id">) }))
     .filter((s) => s.active)
+}
+
+export async function fetchStore(id: string): Promise<Store | null> {
+  const snap = await getDoc(doc(db, "stores", id))
+  if (!snap.exists()) return null
+  return { id: snap.id, ...(snap.data() as Omit<Store, "id">) }
 }
 
 export async function fetchAllStores(): Promise<Store[]> {
